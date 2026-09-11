@@ -17,8 +17,8 @@ def run_export():
     daily_forecasts = {}
     monthly_forecasts = {}
 
-    # 1. Generate future daily forecasts from 2026-01-01 to 2027-12-31 in one fast autoregressive pass
-    future_end = pd.Timestamp("2027-12-31")
+    # 1. Generate future daily forecasts from 2026-01-01 to 2030-12-31 in one fast autoregressive pass
+    future_end = pd.Timestamp("2030-12-31")
     print(f"Generating future daily forecasts until {future_end.strftime('%Y-%m-%d')}...")
     future_df = pf.generate_forecast_until(future_end)
     last_hist_date = pf.daily_df["date"].max()
@@ -48,14 +48,14 @@ def run_export():
             # If not enough history in early 2025, skip or use historical actuals
             pass
 
-    # 3. Generate Monthly Forecasts for 2025, 2026, 2027
+    # 3. Generate Monthly Forecasts for 2025 to 2030
     print("Generating monthly summaries...")
     month_names = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ]
 
-    for yr in [2025, 2026, 2027]:
+    for yr in range(2025, 2031):
         for mo in range(1, 13):
             key = f"{yr}-{mo}"
             # Calculate from daily_forecasts

@@ -15,7 +15,12 @@ export async function GET(request) {
       );
     }
 
-    // 1. Instant assembly from embedded precomputed dataset (0ms latency)
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    // 1. Assemble range with precomputed data and seamless extrapolation for distant years
     const results = [];
     let currentYear = startYear;
     let currentMonth = startMonth;
@@ -24,6 +29,21 @@ export async function GET(request) {
       const key = `${currentYear}-${currentMonth}`;
       if (forecastsData?.monthly && forecastsData.monthly[key]) {
         results.push(forecastsData.monthly[key]);
+      } else {
+        // Extrapolate using seasonal baseline
+        const baseline = forecastsData?.monthly?.[`2030-${currentMonth}`] || forecastsData?.monthly?.[`2026-${currentMonth}`];
+        if (baseline) {
+          const factor = Math.pow(1.03, Math.max(currentYear - 2030, 0));
+          results.push({
+            month: monthNames[currentMonth - 1],
+            year: currentYear,
+            month_number: currentMonth,
+            average_price: Math.round(baseline.average_price * factor * 100) / 100,
+            average_arrivals: baseline.average_arrivals,
+            average_demand: baseline.average_demand,
+            confidence: "Very Low"
+          });
+        }
       }
 
       currentMonth += 1;
@@ -35,23 +55,6 @@ export async function GET(request) {
 
     if (results.length > 0) {
       return NextResponse.json(results);
-    }
-
-    // 2. Fallback to live microservice if configured
-    const rawUrl = process.env.AI_SERVICE_URL;
-    if (rawUrl) {
-      const AI_BASE_URL = rawUrl.replace(/\/+$/, "");
-      try {
-        const response = await fetch(
-          `${AI_BASE_URL}/forecast/months?year=${startYear}&month=${startMonth}&months=${numMonths}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          return NextResponse.json(data);
-        }
-      } catch {
-        // Fallback failed, continue to 404
-      }
     }
 
     return NextResponse.json(

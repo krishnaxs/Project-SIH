@@ -18,23 +18,33 @@ export async function GET(request) {
       return NextResponse.json(forecastsData.daily[date]);
     }
 
-    // 2. Fallback to live microservice if configured (for dates outside precomputed range)
-    const rawUrl = process.env.AI_SERVICE_URL;
-    if (rawUrl) {
-      const AI_BASE_URL = rawUrl.replace(/\/+$/, "");
-      try {
-        const response = await fetch(`${AI_BASE_URL}/forecast?date=${date}`);
-        if (response.ok) {
-          const data = await response.json();
-          return NextResponse.json(data);
-        }
-      } catch {
-        // Fallback failed, continue to 404
+    // 2. Extrapolate if outside range (e.g. year > 2030) using matching month-day baseline
+    const parsed = new Date(date);
+    if (!isNaN(parsed.getTime())) {
+      const yr = parsed.getFullYear();
+      const mo = String(parsed.getMonth() + 1).padStart(2, "0");
+      const da = String(parsed.getDate()).padStart(2, "0");
+      const baselineKey = `2030-${mo}-${da}`;
+      const baseline = forecastsData?.daily?.[baselineKey];
+
+      if (baseline) {
+        const factor = Math.pow(1.03, Math.max(yr - 2030, 0));
+        const lastHistDate = new Date("2025-12-31");
+        const daysAhead = Math.max(Math.floor((parsed - lastHistDate) / (1000 * 60 * 60 * 24)), 0);
+
+        return NextResponse.json({
+          date: date,
+          predicted_price: Math.round(baseline.predicted_price * factor * 100) / 100,
+          predicted_arrivals: baseline.predicted_arrivals,
+          demand_score: baseline.demand_score,
+          days_ahead: daysAhead,
+          confidence: "Very Low"
+        });
       }
     }
 
     return NextResponse.json(
-      { error: `No forecast available for date ${date}. Available range is 2025 to 2027.` },
+      { error: `No forecast available for date ${date}.` },
       { status: 404 }
     );
   } catch (error) {

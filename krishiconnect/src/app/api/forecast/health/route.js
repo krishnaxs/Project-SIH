@@ -9,7 +9,8 @@ export async function GET() {
     state: forecastsData?.metadata?.state || "Uttar Pradesh",
     totalDays: forecastsData?.metadata?.total_days || 0,
     totalMonths: forecastsData?.metadata?.total_months || 0,
-    availableRange: `${forecastsData?.metadata?.start_date} to ${forecastsData?.metadata?.end_date}`,
+    precomputedRange: `${forecastsData?.metadata?.start_date} to ${forecastsData?.metadata?.end_date}`,
+    extrapolationSupport: "Active (Seamless seasonal extrapolation for dates beyond 2030)",
     latency: "0ms",
     note: "All predictions generated from trained XGBoost & Arrival models, served directly inside Next.js with 100% uptime."
   });
