@@ -27,7 +27,10 @@ const SideBar = ({ sidebarOpen, setSidebarOpen, logout }) => {
           </div>
 
           <nav className="space-y-2">
-          <button className="w-full rounded-lg bg-green-700 px-4 py-3 text-left">
+          <button
+            onClick={() => router.push("/logistics/dashboard")}
+            className="w-full rounded-lg bg-green-700 px-4 py-3 text-left font-medium hover:bg-green-800 transition"
+          >
             🏠 Dashboard
           </button>
 
@@ -46,13 +49,14 @@ const SideBar = ({ sidebarOpen, setSidebarOpen, logout }) => {
           </button>
 
           <button
-            onClick={() => router.push("/logistics/requests")}
+            onClick={() => router.push("/logistics/requests?tab=pending")}
             className="w-full rounded-lg px-4 py-3 text-left text-green-100 hover:bg-green-800"
           >
             📦 Transport Requests
           </button>
 
           <button
+            onClick={() => router.push("/logistics/requests?tab=active")}
             className="w-full rounded-lg px-4 py-3 text-left text-green-100 hover:bg-green-800"
           >
             📍 Active Deliveries

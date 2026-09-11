@@ -15,11 +15,27 @@ export default function LogisticsRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [successFeedback, setSuccessFeedback] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
+  const [activeTab, setActiveTab] = useState("pending");
 
   useEffect(() => {
     fetchRequests();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam === "active" || tabParam === "completed" || tabParam === "pending") {
+        setActiveTab(tabParam);
+      }
+    }
   }, []);
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/logistics/requests?tab=${tab}`);
+    }
+  };
 
   const fetchRequests = async () => {
     try {
@@ -109,6 +125,17 @@ export default function LogisticsRequestsPage() {
         }
       }
 
+      if (status === "accepted") {
+        setSuccessFeedback("✓ Request accepted! Moved to Active Deliveries.");
+        setTimeout(() => setSuccessFeedback(""), 6000);
+      } else if (status === "delivered") {
+        setSuccessFeedback("✓ Delivery marked as completed!");
+        setTimeout(() => setSuccessFeedback(""), 6000);
+      } else if (status === "rejected") {
+        setSuccessFeedback("Request rejected.");
+        setTimeout(() => setSuccessFeedback(""), 4000);
+      }
+
       await fetchRequests();
     } catch (error) {
       console.error("Update request error:", error);
@@ -137,6 +164,26 @@ export default function LogisticsRequestsPage() {
     }
   };
 
+  // Group requests
+  const pendingRequests = requests.filter((r) => r.status === "pending");
+  const activeDeliveries = requests.filter(
+    (r) => r.status === "accepted" || r.status === "in_transit"
+  );
+  const completedRequests = requests.filter(
+    (r) => r.status === "delivered" || r.status === "rejected"
+  );
+
+  const pendingCount = pendingRequests.length;
+  const activeCount = activeDeliveries.length;
+  const completedCount = completedRequests.length;
+
+  const currentDisplayList =
+    activeTab === "pending"
+      ? pendingRequests
+      : activeTab === "active"
+      ? activeDeliveries
+      : completedRequests;
+
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-10">
       <div className="mx-auto max-w-6xl">
@@ -146,21 +193,115 @@ export default function LogisticsRequestsPage() {
           onClick={() =>
             router.push("/logistics/dashboard")
           }
-          className="mb-6 text-sm font-semibold text-green-700 hover:text-green-800"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-800"
         >
           ← Back to Dashboard
         </button>
 
         {/* Page heading */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Transport Requests
-          </h1>
+        <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">
+              {activeTab === "pending"
+                ? "Transport Requests"
+                : activeTab === "active"
+                ? "Active Deliveries"
+                : "Completed Deliveries"}
+            </h1>
 
-          <p className="mt-2 text-slate-600">
-            Requests received for your vehicles.
-          </p>
+            <p className="mt-1 text-slate-600">
+              {activeTab === "pending"
+                ? "Pending transport requests received for your vehicles."
+                : activeTab === "active"
+                ? "Manage ongoing and accepted deliveries."
+                : "Record of completed and rejected deliveries."}
+            </p>
+          </div>
         </div>
+
+        {/* Tab switcher buttons */}
+        <div className="mb-8 flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => switchTab("pending")}
+            className={`flex items-center gap-2 rounded-xl px-5 py-3 font-semibold transition ${
+              activeTab === "pending"
+                ? "bg-green-700 text-white shadow-sm"
+                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+            }`}
+          >
+            <span>📦 Transport Requests</span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                activeTab === "pending"
+                  ? "bg-green-800 text-green-100"
+                  : pendingCount > 0
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {pendingCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => switchTab("active")}
+            className={`flex items-center gap-2 rounded-xl px-5 py-3 font-semibold transition ${
+              activeTab === "active"
+                ? "bg-green-700 text-white shadow-sm"
+                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+            }`}
+          >
+            <span>📍 Active Deliveries</span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                activeTab === "active"
+                  ? "bg-green-800 text-green-100"
+                  : activeCount > 0
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {activeCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => switchTab("completed")}
+            className={`flex items-center gap-2 rounded-xl px-5 py-3 font-semibold transition ${
+              activeTab === "completed"
+                ? "bg-green-700 text-white shadow-sm"
+                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+            }`}
+          >
+            <span>✓ Completed History</span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                activeTab === "completed"
+                  ? "bg-green-800 text-green-100"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {completedCount}
+            </span>
+          </button>
+        </div>
+
+        {/* Success Feedback Alert */}
+        {successFeedback && (
+          <div className="mb-6 flex items-center justify-between rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
+            <div className="flex items-center gap-2 font-medium">
+              <span>{successFeedback}</span>
+            </div>
+            {activeTab !== "active" && activeCount > 0 && (
+              <button
+                onClick={() => switchTab("active")}
+                className="rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-800 transition"
+              >
+                Go to Active Deliveries ({activeCount}) →
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Loading */}
         {loading && (
@@ -178,39 +319,76 @@ export default function LogisticsRequestsPage() {
           </div>
         )}
 
-        {/* No requests */}
+        {/* Tab 1: No pending requests */}
+        {!loading && !message && activeTab === "pending" && pendingCount === 0 && (
+          <div className="rounded-xl bg-white p-12 text-center shadow-sm">
+            <div className="text-5xl">📦</div>
+
+            <h2 className="mt-4 text-xl font-bold text-slate-900">
+              No pending requests
+            </h2>
+
+            <p className="mt-2 text-slate-600">
+              You have responded to all transport requests. New incoming requests will appear here.
+            </p>
+
+            {activeCount > 0 && (
+              <button
+                onClick={() => switchTab("active")}
+                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white hover:bg-green-800 transition"
+              >
+                📍 View Active Deliveries ({activeCount})
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Tab 2: No active deliveries */}
+        {!loading && !message && activeTab === "active" && activeCount === 0 && (
+          <div className="rounded-xl bg-white p-12 text-center shadow-sm">
+            <div className="text-5xl">🚚</div>
+
+            <h2 className="mt-4 text-xl font-bold text-slate-900">
+              No active deliveries
+            </h2>
+
+            <p className="mt-2 text-slate-600">
+              Accepted transport requests will appear here for pickup, live route navigation, and delivery tracking.
+            </p>
+
+            {pendingCount > 0 && (
+              <button
+                onClick={() => switchTab("pending")}
+                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white hover:bg-green-800 transition"
+              >
+                📦 View Pending Requests ({pendingCount})
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: No completed deliveries */}
+        {!loading && !message && activeTab === "completed" && completedCount === 0 && (
+          <div className="rounded-xl bg-white p-12 text-center shadow-sm">
+            <div className="text-5xl">📋</div>
+
+            <h2 className="mt-4 text-xl font-bold text-slate-900">
+              No completed deliveries
+            </h2>
+
+            <p className="mt-2 text-slate-600">
+              Delivered or finalized transport requests will appear here for your history.
+            </p>
+          </div>
+        )}
+
+        {/* Requests / Deliveries List */}
         {!loading &&
           !message &&
-          requests.length === 0 && (
-            <div className="rounded-xl bg-white p-12 text-center shadow-sm">
-              <div className="text-5xl">📦</div>
-
-              <h2 className="mt-4 text-xl font-bold text-slate-900">
-                No transport requests
-              </h2>
-
-              <p className="mt-2 text-slate-600">
-                Requests for your vehicles will appear here.
-              </p>
-            </div>
-          )}
-
-        {/* Requests */}
-        {!loading &&
-          !message &&
-          requests.length > 0 && (
+          currentDisplayList.length > 0 && (
             <div className="space-y-5">
 
-              {requests.map((request) => {
-
-                /*
-                 * Farmer information comes from:
-                 * request.cropRequest.farmer
-                 *
-                 * Buyer information comes from:
-                 * request.requester
-                 */
-
+              {currentDisplayList.map((request) => {
                 const farmerName =
                   request.cropRequest?.farmer?.name ||
                   "Farmer";
@@ -256,19 +434,23 @@ export default function LogisticsRequestsPage() {
 
                         <p className="mt-1 text-slate-600">
                           Role:{" "}
-                          {request.requester?.role ||
-                            "Unknown"}
+                          <span className="capitalize text-slate-800">
+                            {request.requester?.role ||
+                              "Unknown"}
+                          </span>
                         </p>
 
                         <p className="mt-1 text-slate-600">
                           Phone:{" "}
-                          {request.requester?.phone ||
-                            "Not available"}
+                          <span className="text-slate-800">
+                            {request.requester?.phone ||
+                              "Not available"}
+                          </span>
                         </p>
                       </div>
 
                       <span
-                        className={`w-fit rounded-full px-3 py-1 text-sm font-semibold ${statusClasses(
+                        className={`w-fit rounded-full px-3 py-1 text-sm font-semibold capitalize ${statusClasses(
                           request.status
                         )}`}
                       >
@@ -321,9 +503,48 @@ export default function LogisticsRequestsPage() {
 
                     </div>
 
+                    {/* Pickup & Delivery Location preview (always shown) */}
+                    <div className="mt-5 grid gap-3 md:grid-cols-2">
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                        <p className="text-sm font-bold text-green-700">
+                          🌾 PICKUP LOCATION
+                        </p>
+                        <p className="mt-1 font-semibold text-slate-800">
+                          Farmer: {farmerName}
+                        </p>
+                        {hasPickup ? (
+                          <p className="mt-1 text-sm text-slate-600">
+                            📍 {pickup.address || "Farmer location"}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-sm text-slate-500">
+                            Location details pending
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                        <p className="text-sm font-bold text-red-700">
+                          📦 DELIVERY LOCATION
+                        </p>
+                        <p className="mt-1 font-semibold text-slate-800">
+                          Buyer: {buyerName}
+                        </p>
+                        {hasDelivery ? (
+                          <p className="mt-1 text-sm text-slate-600">
+                            📍 {delivery.address || "Buyer location"}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-sm text-slate-500">
+                            Location details pending
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Notes */}
                     {request.notes && (
-                      <div className="mt-5 rounded-lg bg-slate-50 p-4">
+                      <div className="mt-4 rounded-lg bg-slate-50 p-4">
                         <p className="text-sm font-semibold text-slate-700">
                           Notes
                         </p>
@@ -334,7 +555,7 @@ export default function LogisticsRequestsPage() {
                       </div>
                     )}
 
-                    {/* Pending */}
+                    {/* Action buttons for PENDING requests */}
                     {request.status === "pending" && (
                       <div className="mt-6 flex gap-3">
 
@@ -348,11 +569,11 @@ export default function LogisticsRequestsPage() {
                           disabled={
                             updatingId === request._id
                           }
-                          className="flex-1 rounded-lg bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                          className="flex-1 rounded-lg bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700 transition disabled:opacity-50"
                         >
                           {updatingId === request._id
-                            ? "Updating..."
-                            : "Accept"}
+                            ? "Accepting..."
+                            : "✓ Accept Request"}
                         </button>
 
                         <button
@@ -365,7 +586,7 @@ export default function LogisticsRequestsPage() {
                           disabled={
                             updatingId === request._id
                           }
-                          className="flex-1 rounded-lg bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                          className="flex-1 rounded-lg bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
                         >
                           ✕ Reject Request
                         </button>
@@ -373,7 +594,7 @@ export default function LogisticsRequestsPage() {
                       </div>
                     )}
 
-                    {/* Accepted */}
+                    {/* Action button for ACCEPTED requests (Ready to start transport) */}
                     {request.status === "accepted" && (
                       <button
                         onClick={() =>
@@ -385,68 +606,18 @@ export default function LogisticsRequestsPage() {
                         disabled={
                           updatingId === request._id
                         }
-                        className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
                       >
-                        🚚 Start Transport
+                        {updatingId === request._id
+                          ? "Starting transport..."
+                          : "🚚 Start Transport"}
                       </button>
                     )}
 
-                    {/* IN TRANSIT */}
+                    {/* Map & Live Route for IN TRANSIT requests */}
                     {request.status === "in_transit" && (
-                      <div className="mt-6">
+                      <div className="mt-5">
 
-                        {/* Location information */}
-                        <div className="mb-4 grid gap-3 md:grid-cols-2">
-
-                          {/* Pickup */}
-                          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                            <p className="text-sm font-bold text-green-700">
-                              🌾 PICKUP LOCATION
-                            </p>
-
-                            <p className="mt-1 font-semibold text-slate-800">
-                              Farmer: {farmerName}
-                            </p>
-
-                            {hasPickup ? (
-                              <p className="mt-1 text-sm text-slate-600">
-                                📍{" "}
-                                {pickup.address ||
-                                  "Farmer location"}
-                              </p>
-                            ) : (
-                              <p className="mt-2 text-sm font-semibold text-red-600">
-                                ⚠️ Pickup location not available
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Delivery */}
-                          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                            <p className="text-sm font-bold text-red-700">
-                              📦 DELIVERY LOCATION
-                            </p>
-
-                            <p className="mt-1 font-semibold text-slate-800">
-                              Buyer: {buyerName}
-                            </p>
-
-                            {hasDelivery ? (
-                              <p className="mt-1 text-sm text-slate-600">
-                                📍{" "}
-                                {delivery.address ||
-                                  "Buyer location"}
-                              </p>
-                            ) : (
-                              <p className="mt-2 text-sm font-semibold text-red-600">
-                                ⚠️ Delivery location not available
-                              </p>
-                            )}
-                          </div>
-
-                        </div>
-
-                        {/* Map */}
                         {hasPickup && hasDelivery ? (
                           <TransportMap
                             requestId={request._id}
@@ -527,25 +698,25 @@ export default function LogisticsRequestsPage() {
                           </div>
                         )}
 
-                      </div>
-                    )}
+                        {/* Mark Delivered button */}
+                        <button
+                          onClick={() =>
+                            updateRequestStatus(
+                              request._id,
+                              "delivered"
+                            )
+                          }
+                          disabled={
+                            updatingId === request._id
+                          }
+                          className="mt-6 w-full rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-700 transition disabled:opacity-50"
+                        >
+                          {updatingId === request._id
+                            ? "Updating..."
+                            : "✓ Mark as Delivered"}
+                        </button>
 
-                    {/* Delivered button */}
-                    {request.status === "in_transit" && (
-                      <button
-                        onClick={() =>
-                          updateRequestStatus(
-                            request._id,
-                            "delivered"
-                          )
-                        }
-                        disabled={
-                          updatingId === request._id
-                        }
-                        className="mt-6 w-full rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        ✓ Mark as Delivered
-                      </button>
+                      </div>
                     )}
 
                   </div>

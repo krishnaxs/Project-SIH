@@ -8,29 +8,56 @@ export default function LogisticsDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [vehicleCount, setVehicleCount]= useState(0);
+  const [vehicleCount, setVehicleCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [activeDeliveryCount, setActiveDeliveryCount] = useState(0);
 
   const fetchVehicleCount = async () => {
-  try {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    if (!token) return;
+      if (!token) return;
 
-    const response = await fetch("/api/vehicles/my-vehicles", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      const response = await fetch("/api/vehicles/my-vehicles", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (response.ok) {
-      setVehicleCount(data.length);
+      if (response.ok) {
+        setVehicleCount(data.length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch vehicle count:", error);
     }
-  } catch (error) {
-    console.error("Failed to fetch vehicle count:", error);
-  }
-};
+  };
+
+  const fetchTransportStats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await fetch("/api/transport-requests/logistics", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok && Array.isArray(data)) {
+        const pending = data.filter((r) => r.status === "pending").length;
+        const active = data.filter(
+          (r) => r.status === "accepted" || r.status === "in_transit"
+        ).length;
+        setPendingCount(pending);
+        setActiveDeliveryCount(active);
+      }
+    } catch (error) {
+      console.error("Failed to fetch transport stats:", error);
+    }
+  };
 
   useEffect(() => {
   const token = localStorage.getItem("token");
@@ -59,6 +86,7 @@ export default function LogisticsDashboard() {
 
   setUser(parsedUser);
   fetchVehicleCount();
+  fetchTransportStats();
 }, [router]); 
 
   const logout = () => {
@@ -93,7 +121,10 @@ export default function LogisticsDashboard() {
 
         <section className="mb-10 grid gap-5 md:grid-cols-3">
 
-          <div className="rounded-xl bg-white p-6 shadow-sm">
+          <div
+            onClick={() => router.push("/logistics/vehicles")}
+            className="cursor-pointer rounded-xl bg-white p-6 shadow-sm transition hover:shadow-md"
+          >
             <p className="text-sm text-slate-500">
               My Vehicles
             </p>
@@ -102,21 +133,27 @@ export default function LogisticsDashboard() {
             </h2>
           </div>
 
-          <div className="rounded-xl bg-white p-6 shadow-sm">
+          <div
+            onClick={() => router.push("/logistics/requests?tab=pending")}
+            className="cursor-pointer rounded-xl bg-white p-6 shadow-sm transition hover:shadow-md"
+          >
             <p className="text-sm text-slate-500">
               Pending Requests
             </p>
             <h2 className="mt-2 text-3xl font-bold text-orange-600">
-              0
+              {pendingCount}
             </h2>
           </div>
 
-          <div className="rounded-xl bg-white p-6 shadow-sm">
+          <div
+            onClick={() => router.push("/logistics/requests?tab=active")}
+            className="cursor-pointer rounded-xl bg-white p-6 shadow-sm transition hover:shadow-md"
+          >
             <p className="text-sm text-slate-500">
               Active Deliveries
             </p>
             <h2 className="mt-2 text-3xl font-bold text-blue-700">
-              0
+              {activeDeliveryCount}
             </h2>
           </div>
 
@@ -142,7 +179,7 @@ export default function LogisticsDashboard() {
 
               <button
                 onClick={() => router.push("/logistics/add-vehicle")}
-                className="mt-5 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800"
+                className="mt-5 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800 transition"
               >
                 Add Vehicle
               </button>
@@ -160,10 +197,10 @@ export default function LogisticsDashboard() {
               </p>
 
               <button
-              onClick={() => router.push("/logistics/requests")}
-                className="mt-5 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800"
+                onClick={() => router.push("/logistics/requests?tab=pending")}
+                className="mt-5 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800 transition"
               >
-                View Requests
+                View Requests {pendingCount > 0 ? `(${pendingCount})` : ""}
               </button>
             </div>
 
@@ -179,9 +216,10 @@ export default function LogisticsDashboard() {
               </p>
 
               <button
-                className="mt-5 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800"
+                onClick={() => router.push("/logistics/requests?tab=active")}
+                className="mt-5 rounded-lg bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800 transition"
               >
-                View Deliveries
+                View Deliveries {activeDeliveryCount > 0 ? `(${activeDeliveryCount})` : ""}
               </button>
             </div>
 
