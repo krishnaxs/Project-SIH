@@ -141,22 +141,14 @@ export default function FarmerDashboard() {
       {/* Main Content */}
       <section className="flex-1 p-8 transition-all duration-300">
 
-        <header className="mb-10 flex items-center justify-between">
+        <header className="mb-10">
+          <h1 className="text-3xl font-bold text-slate-900">
+            Welcome, {user.name}
+          </h1>
 
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Welcome, {user.name}
-            </h1>
-
-            <p className="mt-2 text-slate-600">
-              Manage your crops and discover opportunities nearby.
-            </p>
-          </div>
-
-          <div className="rounded-full bg-white px-5 py-3 font-medium text-slate-700 shadow-sm mr-28 sm:mr-32">
-            👤 {user.name}
-          </div>
-
+          <p className="mt-2 text-slate-600">
+            Manage your crops and discover opportunities nearby.
+          </p>
         </header>
 
         {/* Stats */}
