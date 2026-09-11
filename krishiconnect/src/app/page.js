@@ -6,9 +6,20 @@ export default function Home() {
   const router = useRouter();
 
   return (
-    <main className="min-h-screen bg-stone-50 text-slate-900">
+    <main className="relative min-h-screen bg-stone-50 text-slate-900">
+      {/* Transparent Farmland Background Image */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-15"
+        style={{ backgroundImage: "url('/images/farmland-landscape.jpg')" }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-stone-50/70 via-transparent to-stone-50/80"
+      />
+
       {/* Navbar */}
-      <nav className="border-b border-slate-200 bg-white">
+      <nav className="relative z-10 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
           <div className="text-2xl font-bold text-green-700">
             🌱 KrishiConnect
@@ -17,7 +28,7 @@ export default function Home() {
           <div className="flex items-center gap-3 pr-28 sm:pr-32">
             <button
               onClick={() => router.push("/login")}
-              className="rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white transition hover:bg-green-800"
+              className="rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white transition hover:bg-green-800 shadow-sm hover:shadow"
             >
               Login
             </button>
@@ -26,7 +37,7 @@ export default function Home() {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-7xl px-6 pb-16 pt-20 text-center lg:px-8">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 pb-28 pt-16 text-center lg:px-8">
         <p className="mb-4 text-sm font-bold tracking-[0.2em] text-green-700">
           DIRECT FARM TO MARKET CONNECTION
         </p>
@@ -43,11 +54,11 @@ export default function Home() {
           and bulk buyers while providing access to nearby logistics services.
         </p>
 
-        {/* Role Cards */}
+        {/* Role Cards / Registration Boxes */}
         <div className="mx-auto mt-14 grid max-w-6xl gap-6 md:grid-cols-3">
 
           {/* Farmer */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-8 text-left shadow-lg shadow-slate-200/70 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-300/80">
             <div className="mb-5 text-5xl">🌾</div>
 
             <h2 className="text-2xl font-bold text-slate-900">
@@ -61,14 +72,14 @@ export default function Home() {
 
             <button
               onClick={() => router.push("/register/farmer")}
-              className="mt-6 w-full rounded-lg bg-green-700 px-4 py-3 font-semibold text-white transition hover:bg-green-800"
+              className="mt-6 w-full rounded-lg bg-green-700 px-4 py-3 font-semibold text-white shadow-md shadow-green-700/20 transition hover:bg-green-800 hover:shadow-lg hover:shadow-green-700/30"
             >
               Join as Farmer
             </button>
           </div>
 
           {/* Buyer */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-8 text-left shadow-lg shadow-slate-200/70 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-300/80">
             <div className="mb-5 text-5xl">🛒</div>
 
             <h2 className="text-2xl font-bold text-slate-900">
@@ -82,14 +93,14 @@ export default function Home() {
 
             <button
               onClick={() => router.push("/register/buyer")}
-              className="mt-6 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white transition hover:bg-blue-800"
+              className="mt-6 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white shadow-md shadow-blue-700/20 transition hover:bg-blue-800 hover:shadow-lg hover:shadow-blue-700/30"
             >
               Join as Buyer
             </button>
           </div>
 
           {/* Logistics */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-8 text-left shadow-lg shadow-slate-200/70 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-300/80">
             <div className="mb-5 text-5xl">🚛</div>
 
             <h2 className="text-2xl font-bold text-slate-900">
@@ -103,7 +114,7 @@ export default function Home() {
 
             <button
               onClick={() => router.push("/register/logistics")}
-              className="mt-6 w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white transition hover:bg-orange-700"
+              className="mt-6 w-full rounded-lg bg-orange-600 px-4 py-3 font-semibold text-white shadow-md shadow-orange-600/20 transition hover:bg-orange-700 hover:shadow-lg hover:shadow-orange-600/30"
             >
               Join as Logistics
             </button>
