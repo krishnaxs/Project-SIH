@@ -18,18 +18,23 @@ import {
 
 
 export default function DemandForecastPage() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const todayString = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const [state, setState] = useState("Uttar Pradesh");
   const [crop, setCrop] = useState("Tomato");
 
   const [forecastType, setForecastType] = useState("date");
 
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(todayString);
 
-  const [year, setYear] = useState("2026");
-  const [month, setMonth] = useState("");
+  const [year, setYear] = useState(String(currentYear));
+  const [month, setMonth] = useState(String(currentMonth));
 
   const [numberOfMonths, setNumberOfMonths] = useState("3");
+
 
   const [loading, setLoading] = useState(false);
 
@@ -69,9 +74,26 @@ export default function DemandForecastPage() {
     { value: "9", name: "September" },
     { value: "10", name: "October" },
     { value: "11", name: "November" },
-    { value: "12", name: "December" },
   ];
 
+  const availableYears = [2026, 2027, 2028, 2029, 2030].filter((y) => y >= currentYear);
+
+  // Filter out previous months when the selected year is the current year
+  const availableMonths = months.filter((item) => {
+    const selectedYearInt = parseInt(year, 10);
+    if (selectedYearInt === currentYear) {
+      return parseInt(item.value, 10) >= currentMonth;
+    }
+    return true;
+  });
+
+  const handleYearChange = (newYear) => {
+    setYear(newYear);
+    const newYearInt = parseInt(newYear, 10);
+    if (newYearInt === currentYear && parseInt(month, 10) < currentMonth) {
+      setMonth(String(currentMonth));
+    }
+  };
 
   const handleSubmit = async () => {
 
@@ -557,6 +579,7 @@ export default function DemandForecastPage() {
 
                   <input
                     type="date"
+                    min={todayString}
                     value={selectedDate}
                     onChange={(e) =>
                       setSelectedDate(e.target.value)
@@ -583,39 +606,17 @@ export default function DemandForecastPage() {
 
 
                   <select
-
                     value={year}
-
                     onChange={(e) =>
-                      setYear(e.target.value)
+                      handleYearChange(e.target.value)
                     }
-
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
                   >
-
-                    <option value="2025">
-                      2025
-                    </option>
-
-                    <option value="2026">
-                      2026
-                    </option>
-
-                    <option value="2027">
-                      2027
-                    </option>
-
-                    <option value="2028">
-                      2028
-                    </option>
-
-                    <option value="2029">
-                      2029
-                    </option>
-
-                    <option value="2030">
-                      2030
-                    </option>
+                    {availableYears.map((y) => (
+                      <option key={y} value={String(y)}>
+                        {y}
+                      </option>
+                    ))}
                   </select>
 
 
@@ -638,39 +639,22 @@ export default function DemandForecastPage() {
 
 
                   <select
-
                     value={month}
-
                     onChange={(e) =>
                       setMonth(e.target.value)
                     }
-
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition [color-scheme:light] focus:border-green-600 focus:ring-2 focus:ring-green-100"
-
                   >
-
-                    <option value="" disabled className="text-gray-500">
-                      Select Month
-                    </option>
-
-
-                    {months.map((item) => (
-
+                    {availableMonths.map((item) => (
                       <option
-
                         key={item.value}
-
                         value={item.value}
-
                       >
-
                         {item.name}
-
                       </option>
-
                     ))}
-
                   </select>
+
 
                 </div>
 
