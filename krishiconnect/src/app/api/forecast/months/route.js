@@ -1,75 +1,67 @@
 import { NextResponse } from "next/server";
-
-export const maxDuration = 60;
-
-const monthsCache = new Map();
+import forecastsData from "@/data/forecasts.json";
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+    const startYear = parseInt(searchParams.get("year"), 10);
+    const startMonth = parseInt(searchParams.get("month"), 10);
+    const numMonths = parseInt(searchParams.get("months"), 10);
 
-    const year = searchParams.get("year");
-    const month = searchParams.get("month");
-    const months = searchParams.get("months");
-
-    if (!year || !month || !months) {
+    if (!startYear || !startMonth || !numMonths) {
       return NextResponse.json(
-        {
-          error: "Year, month and number of months are required"
-        },
-        {
-          status: 400
+        { error: "Year, month and number of months are required" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Instant assembly from embedded precomputed dataset (0ms latency)
+    const results = [];
+    let currentYear = startYear;
+    let currentMonth = startMonth;
+
+    for (let i = 0; i < numMonths; i++) {
+      const key = `${currentYear}-${currentMonth}`;
+      if (forecastsData?.monthly && forecastsData.monthly[key]) {
+        results.push(forecastsData.monthly[key]);
+      }
+
+      currentMonth += 1;
+      if (currentMonth > 12) {
+        currentMonth = 1;
+        currentYear += 1;
+      }
+    }
+
+    if (results.length > 0) {
+      return NextResponse.json(results);
+    }
+
+    // 2. Fallback to live microservice if configured
+    const rawUrl = process.env.AI_SERVICE_URL;
+    if (rawUrl) {
+      const AI_BASE_URL = rawUrl.replace(/\/+$/, "");
+      try {
+        const response = await fetch(
+          `${AI_BASE_URL}/forecast/months?year=${startYear}&month=${startMonth}&months=${numMonths}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          return NextResponse.json(data);
         }
-      );
+      } catch {
+        // Fallback failed, continue to 404
+      }
     }
 
-    const cacheKey = `${year}-${month}-${months}`;
-    if (monthsCache.has(cacheKey)) {
-      return NextResponse.json(monthsCache.get(cacheKey));
-    }
-
-    const rawUrl = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
-    const AI_BASE_URL = rawUrl.replace(/\/+$/, "");
-
-    const response = await fetch(
-      `${AI_BASE_URL}/forecast/months?year=${year}&month=${month}&months=${months}`
+    return NextResponse.json(
+      { error: "No forecast data available for selected period." },
+      { status: 404 }
     );
-
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      return NextResponse.json(
-        { error: `AI service returned status ${response.status} (non-JSON response)` },
-        { status: response.status || 502 }
-      );
-    }
-
-    if (!response.ok) {
-      const errorMessage =
-        typeof data?.detail === "string"
-          ? data.detail
-          : Array.isArray(data?.detail)
-          ? data.detail.map((d) => d.msg).join(", ")
-          : data?.error || data?.message || `AI service error (${response.status})`;
-
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: response.status }
-      );
-    }
-
-    monthsCache.set(cacheKey, data);
-    return NextResponse.json(data);
-
   } catch (error) {
     return NextResponse.json(
-      {
-        error: error.message || "Unable to get multiple month forecast"
-      },
-      {
-        status: 500
-      }
+      { error: error.message || "Unable to get multiple month forecast" },
+      { status: 500 }
     );
   }
 }

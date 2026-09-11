@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
-
-export const maxDuration = 60;
-
-const monthCache = new Map();
+import forecastsData from "@/data/forecasts.json";
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-
     const year = searchParams.get("year");
     const month = searchParams.get("month");
 
@@ -18,45 +14,32 @@ export async function GET(request) {
       );
     }
 
-    const cacheKey = `${year}-${month}`;
-    if (monthCache.has(cacheKey)) {
-      return NextResponse.json(monthCache.get(cacheKey));
+    const key = `${year}-${parseInt(month, 10)}`;
+
+    // 1. Instant lookup from embedded precomputed dataset (0ms latency)
+    if (forecastsData?.monthly && forecastsData.monthly[key]) {
+      return NextResponse.json(forecastsData.monthly[key]);
     }
 
-    const rawUrl = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
-    const AI_BASE_URL = rawUrl.replace(/\/+$/, "");
+    // 2. Fallback to live microservice if configured
+    const rawUrl = process.env.AI_SERVICE_URL;
+    if (rawUrl) {
+      const AI_BASE_URL = rawUrl.replace(/\/+$/, "");
+      try {
+        const response = await fetch(`${AI_BASE_URL}/forecast/month?year=${year}&month=${month}`);
+        if (response.ok) {
+          const data = await response.json();
+          return NextResponse.json(data);
+        }
+      } catch {
+        // Fallback failed, continue to 404
+      }
+    }
 
-    const response = await fetch(
-      `${AI_BASE_URL}/forecast/month?year=${year}&month=${month}`
+    return NextResponse.json(
+      { error: `No monthly forecast available for ${year}-${month}. Available range is 2025 to 2027.` },
+      { status: 404 }
     );
-
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      return NextResponse.json(
-        { error: `AI service returned status ${response.status} (non-JSON response)` },
-        { status: response.status || 502 }
-      );
-    }
-
-    if (!response.ok) {
-      const errorMessage =
-        typeof data?.detail === "string"
-          ? data.detail
-          : Array.isArray(data?.detail)
-          ? data.detail.map((d) => d.msg).join(", ")
-          : data?.error || data?.message || `AI service error (${response.status})`;
-
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: response.status }
-      );
-    }
-
-    monthCache.set(cacheKey, data);
-    return NextResponse.json(data);
-
   } catch (error) {
     return NextResponse.json(
       { error: error.message || "Unable to get monthly forecast" },
