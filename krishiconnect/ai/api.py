@@ -26,7 +26,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origin_regex="https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,7 +39,13 @@ app.add_middleware(
 
 @app.get("/")
 def home():
+    return {
+        "status": "AI API is running"
+    }
 
+
+@app.get("/healthz")
+def healthz():
     return {
         "status": "AI API is running"
     }

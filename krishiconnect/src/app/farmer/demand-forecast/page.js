@@ -147,17 +147,28 @@ export default function DemandForecastPage() {
 
       const response = await fetch(url);
 
-      const data = await response.json();
-
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          `Server returned status ${response.status}. If the AI service is spinning up, please try again in 30 seconds.`
+        );
+      }
 
       if (!response.ok) {
+        const errorMsg =
+          typeof data?.error === "string"
+            ? data.error
+            : typeof data?.detail === "string"
+            ? data.detail
+            : Array.isArray(data?.detail)
+            ? data.detail.map((d) => d.msg).join(", ")
+            : data?.message || "Unable to generate forecast.";
 
-        throw new Error(
-          data.error ||
-          "Unable to generate forecast."
-        );
-
+        throw new Error(errorMsg);
       }
+
 
 
       setResult(data);

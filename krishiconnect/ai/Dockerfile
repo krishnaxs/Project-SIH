@@ -17,6 +17,5 @@ COPY . .
 # Expose port (Render/Railway/Fly.io)
 EXPOSE 8000
 
-# Start FastAPI server
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
-
+# Start FastAPI server (supports dynamic PORT on Render, Railway, Fly.io)
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"]
