@@ -30,9 +30,36 @@ export async function POST(request) {
       );
     }
 
+    // Email validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!emailPattern.test(cleanEmail)) {
+      return NextResponse.json(
+        { message: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
+
+    // Phone validation: +91 prefix and 10 digits starting with 6, 7, 8, 9
+    let cleanedPhone = String(phone).trim().replace(/[\s\-()]+/g, "");
+    if (!cleanedPhone.startsWith("+91")) {
+      cleanedPhone = `+91${cleanedPhone.replace(/^\+?91/, "")}`;
+    }
+
+    const indianPhoneRegex = /^\+91[6-9]\d{9}$/;
+    if (!indianPhoneRegex.test(cleanedPhone)) {
+      return NextResponse.json(
+        {
+          message:
+            "Mobile number must be a valid 10-digit Indian number starting with 6, 7, 8, or 9.",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check whether email or phone already exists
     const existingUser = await User.findOne({
-      $or: [{ email }, { phone }],
+      $or: [{ email: cleanEmail }, { phone: cleanedPhone }],
     });
 
     if (existingUser) {
@@ -50,9 +77,9 @@ export async function POST(request) {
 
     // Create user
     const user = await User.create({
-      name,
-      email,
-      phone,
+      name: name.trim(),
+      email: cleanEmail,
+      phone: cleanedPhone,
       password: hashedPassword,
       role,
       location,

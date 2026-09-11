@@ -16,6 +16,11 @@ export default function ProfilePage() {
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [coordinates, setCoordinates] = useState({
+    latitude: null,
+    longitude: null,
+  });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -199,11 +204,46 @@ export default function ProfilePage() {
 
         const user = data.user;
 
+        // Clean phone number to 10 digits for input
+        const rawPhone = user.phone || "";
+        const cleanDigits = rawPhone
+          .replace(/^\+91/, "")
+          .replace(/\D/g, "")
+          .slice(-10);
+
+        let initialAddress = user.location?.address || "";
+        const coords = {
+          latitude: user.location?.latitude || null,
+          longitude: user.location?.longitude || null,
+        };
+        setCoordinates(coords);
+
+        // Auto-resolve legacy "Location captured" or missing address if coords exist
+        if (
+          (!initialAddress || initialAddress.trim() === "Location captured") &&
+          coords.latitude &&
+          coords.longitude
+        ) {
+          try {
+            const geoRes = await fetch(
+              `/api/location/reverse?lat=${coords.latitude}&lng=${coords.longitude}`
+            );
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              if (geoData.address) {
+                initialAddress = geoData.address;
+              }
+            }
+          } catch (err) {
+            console.error("Failed to auto-resolve address:", err);
+          }
+        }
+
         setFormData({
           name: user.name || "",
           email: user.email || "",
-          phone: user.phone || "",
-          address: user.location?.address || "",
+          phone: cleanDigits,
+          address: initialAddress,
         });
 
         setRole(user.role || "");
@@ -232,9 +272,92 @@ export default function ProfilePage() {
     setError("");
   };
 
+  // Indian phone number handling: strictly 10 digits starting with 6, 7, 8, 9
+  const handlePhoneChange = (e) => {
+    let val = e.target.value.replace(/\D/g, ""); // digits only
+
+    if (val.length > 0 && !["6", "7", "8", "9"].includes(val[0])) {
+      setError("Mobile number must start with 6, 7, 8, or 9.");
+      return;
+    }
+
+    if (val.length <= 10) {
+      setFormData((current) => ({
+        ...current,
+        phone: val,
+      }));
+      if (val.length === 10) {
+        setError("");
+      }
+    }
+  };
+
+  // Detect current location & reverse geocode to real address
+  const detectCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setLocating(true);
+    setError("");
+    setMessage("Detecting current GPS coordinates...");
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setCoordinates({ latitude, longitude });
+
+        try {
+          const res = await fetch(
+            `/api/location/reverse?lat=${latitude}&lng=${longitude}`
+          );
+          const geoData = await res.json();
+          const resolvedAddress =
+            geoData.address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+          setFormData((prev) => ({
+            ...prev,
+            address: resolvedAddress,
+          }));
+          setMessage(
+            "Address resolved from GPS! Click 'Save Changes' to update your profile."
+          );
+        } catch (err) {
+          console.error("Reverse geocoding failed:", err);
+          setFormData((prev) => ({
+            ...prev,
+            address: `Near ${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`,
+          }));
+          setMessage(
+            "Coordinates captured. You can refine your address in the box."
+          );
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocating(false);
+        setError(
+          "Location access was denied or unavailable. Please enable browser location permissions."
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   // Update profile
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Phone validation
+    const phoneDigits = formData.phone.trim();
+    if (!/^[6-9]\d{9}$/.test(phoneDigits)) {
+      setError(
+        "Mobile number must be exactly 10 digits and start with 6, 7, 8, or 9."
+      );
+      return;
+    }
 
     setSaving(true);
     setMessage("");
@@ -243,13 +366,20 @@ export default function ProfilePage() {
     try {
       const token = localStorage.getItem("token");
 
+      const payload = {
+        ...formData,
+        phone: `+91${phoneDigits}`,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+      };
+
       const response = await fetch("/api/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -271,12 +401,25 @@ export default function ProfilePage() {
       }
 
       // Update form with returned database values
+      const returnedPhone = data.user.phone || "";
+      const cleanReturnedDigits = returnedPhone
+        .replace(/^\+91/, "")
+        .replace(/\D/g, "")
+        .slice(-10);
+
       setFormData({
         name: data.user.name || "",
         email: data.user.email || "",
-        phone: data.user.phone || "",
+        phone: cleanReturnedDigits,
         address: data.user.location?.address || "",
       });
+
+      if (data.user.location?.latitude && data.user.location?.longitude) {
+        setCoordinates({
+          latitude: data.user.location.latitude,
+          longitude: data.user.location.longitude,
+        });
+      }
 
       // Update stored user information
       const existingUser = localStorage.getItem("user");
@@ -466,30 +609,55 @@ export default function ProfilePage() {
                 Phone Number
               </label>
 
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
-              />
+              <div className="relative flex overflow-hidden rounded-lg border border-slate-300 transition focus-within:border-green-600 focus-within:ring-2 focus-within:ring-green-100">
+                <span className="inline-flex select-none items-center border-r border-slate-300 bg-slate-100 px-4 text-sm font-semibold text-slate-700">
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="10-digit number (e.g. 9876543210)"
+                  value={formData.phone}
+                  onChange={handlePhoneChange}
+                  maxLength={10}
+                  required
+                  className="w-full px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-slate-500">
+                Must start with 6, 7, 8, or 9 and be exactly 10 digits.
+              </p>
             </div>
 
             {/* Address */}
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Address
-              </label>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="text-sm font-semibold text-slate-700">
+                  Current Address
+                </label>
+                <button
+                  type="button"
+                  onClick={detectCurrentLocation}
+                  disabled={locating}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-60 transition"
+                >
+                  📍 {locating ? "Detecting Address..." : "Auto-Detect Current Address"}
+                </button>
+              </div>
 
               <textarea
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                rows={4}
-                placeholder="Enter your address"
+                rows={3}
+                placeholder="Enter your street address, village/city, district, state, pincode"
                 className="w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
               />
+              {coordinates.latitude && coordinates.longitude && (
+                <p className="mt-1 text-xs text-slate-400">
+                  GPS Coordinates: {coordinates.latitude.toFixed(4)}° N, {coordinates.longitude.toFixed(4)}° E
+                </p>
+              )}
             </div>
 
             {/* Success Message */}

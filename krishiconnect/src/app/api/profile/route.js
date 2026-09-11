@@ -101,10 +101,27 @@ export async function PUT(request) {
       );
     }
 
+    // Phone validation: +91 prefix and 10 digits starting with 6, 7, 8, 9
+    let cleanedPhone = phone.replace(/[\s\-()]+/g, "");
+    if (!cleanedPhone.startsWith("+91")) {
+      cleanedPhone = `+91${cleanedPhone.replace(/^\+?91/, "")}`;
+    }
+
+    const indianPhoneRegex = /^\+91[6-9]\d{9}$/;
+    if (!indianPhoneRegex.test(cleanedPhone)) {
+      return NextResponse.json(
+        {
+          message:
+            "Mobile number must be a valid 10-digit Indian number starting with 6, 7, 8, or 9.",
+        },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
     const duplicateUser = await User.findOne({
-      $or: [{ email }, { phone }],
+      $or: [{ email }, { phone: cleanedPhone }],
       _id: { $ne: userId },
     }).select("email phone");
 
@@ -122,16 +139,32 @@ export async function PUT(request) {
       );
     }
 
+    const updateData = {
+      name,
+      email,
+      phone: cleanedPhone,
+      "location.address": address,
+    };
+
+    if (
+      body.latitude !== undefined &&
+      body.latitude !== null &&
+      !isNaN(Number(body.latitude))
+    ) {
+      updateData["location.latitude"] = Number(body.latitude);
+    }
+
+    if (
+      body.longitude !== undefined &&
+      body.longitude !== null &&
+      !isNaN(Number(body.longitude))
+    ) {
+      updateData["location.longitude"] = Number(body.longitude);
+    }
+
     const user = await User.findByIdAndUpdate(
       userId,
-      {
-        $set: {
-          name,
-          email,
-          phone,
-          "location.address": address,
-        },
-      },
+      { $set: updateData },
       { new: true, runValidators: true }
     ).select("name email phone role location");
 
