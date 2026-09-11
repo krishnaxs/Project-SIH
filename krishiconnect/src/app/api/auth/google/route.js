@@ -74,7 +74,11 @@ export async function POST(request) {
     // If new user, create account
     const userRole = role || "farmer";
     const randomPassword = await bcrypt.hash(crypto.randomUUID(), 10);
-    const userPhone = phone || `+91google_${googleUser.sub?.slice(-8) || Date.now().toString().slice(-8)}`;
+    const randomDigits = Math.floor(6000000000 + Math.random() * 3999999999);
+    const userPhone =
+      phone && /^\+91[6-9]\d{9}$/.test(phone)
+        ? phone
+        : `+91${randomDigits}`;
 
     user = await User.create({
       name,
