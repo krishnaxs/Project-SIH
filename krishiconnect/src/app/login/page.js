@@ -55,9 +55,12 @@ export default function LoginPage() {
     }
   };
 
+  const GOOGLE_CLIENT_ID =
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+    "878898139545-e41duhsbc5u7ab2dm9q7ivh1bvblrev7.apps.googleusercontent.com";
+
   useEffect(() => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) return;
+    if (!GOOGLE_CLIENT_ID) return;
 
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
@@ -66,7 +69,7 @@ export default function LoginPage() {
     script.onload = () => {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
-          client_id: clientId,
+          client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleResponse,
         });
 
@@ -94,9 +97,7 @@ export default function LoginPage() {
   }, []);
 
   const handleGoogleClick = () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-    if (!clientId) {
+    if (!GOOGLE_CLIENT_ID) {
       setShowGoogleModal(true);
       return;
     }
