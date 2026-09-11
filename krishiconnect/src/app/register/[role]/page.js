@@ -13,6 +13,7 @@ export default function RegisterPage() {
     email: "",
     phone: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [location, setLocation] = useState(null);
@@ -263,6 +264,19 @@ export default function RegisterPage() {
       return;
     }
 
+    // Password validation
+    if (formData.password.length < 6) {
+      setMessage("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setMessage(
+        "Passwords do not match. Please re-enter your password in Confirm Password."
+      );
+      return;
+    }
+
     const fullPhone = `+91${cleanPhone}`;
 
     try {
@@ -275,7 +289,9 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
           phone: fullPhone,
           role,
           location,
@@ -448,6 +464,24 @@ export default function RegisterPage() {
               name="password"
               placeholder="Create a password"
               value={formData.password}
+              onChange={handleChange}
+              required
+              minLength={6}
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-green-600 focus:ring-2 focus:ring-green-100"
+            />
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Confirm Password
+            </label>
+
+            <input
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
               onChange={handleChange}
               required
               minLength={6}
