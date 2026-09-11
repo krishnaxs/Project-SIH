@@ -119,33 +119,41 @@ export default function DemandForecastPage() {
     try {
 
       let url = "";
-
+      let directUrl = "";
+      const directBase = (
+        process.env.NEXT_PUBLIC_AI_SERVICE_URL ||
+        "https://krishiconnect-ai-gz7b.onrender.com"
+      ).replace(/\/+$/, "");
 
       if (forecastType === "date") {
-
-        url =
-          `/api/forecast?date=${selectedDate}`;
-
+        url = `/api/forecast?date=${selectedDate}`;
+        directUrl = `${directBase}/forecast?date=${selectedDate}`;
       }
-
 
       if (forecastType === "month") {
-
-        url =
-          `/api/forecast/month?year=${year}&month=${month}`;
-
+        url = `/api/forecast/month?year=${year}&month=${month}`;
+        directUrl = `${directBase}/forecast/month?year=${year}&month=${month}`;
       }
-
 
       if (forecastType === "multiple") {
-
-        url =
-          `/api/forecast/months?year=${year}&month=${month}&months=${numberOfMonths}`;
-
+        url = `/api/forecast/months?year=${year}&month=${month}&months=${numberOfMonths}`;
+        directUrl = `${directBase}/forecast/months?year=${year}&month=${month}&months=${numberOfMonths}`;
       }
 
+      let response = await fetch(url);
 
-      const response = await fetch(url);
+      // If Vercel serverless timed out (504) or failed (502), automatically query Render directly from browser
+      if ((response.status === 504 || response.status === 502) && directUrl) {
+        try {
+          const directResponse = await fetch(directUrl);
+          if (directResponse.ok) {
+            response = directResponse;
+          }
+        } catch {
+          // Keep original response for error reporting
+        }
+      }
+
 
       let data;
       try {
