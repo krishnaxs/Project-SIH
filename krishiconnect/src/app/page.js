@@ -14,12 +14,14 @@ export default function Home() {
             🌱 KrishiConnect
           </div>
 
-          <button
-            onClick={() => router.push("/login")}
-            className="rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white transition hover:bg-green-800"
-          >
-            Login
-          </button>
+          <div className="flex items-center gap-3 pr-28 sm:pr-32">
+            <button
+              onClick={() => router.push("/login")}
+              className="rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white transition hover:bg-green-800"
+            >
+              Login
+            </button>
+          </div>
         </div>
       </nav>
 

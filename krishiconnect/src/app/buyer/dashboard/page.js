@@ -9,55 +9,114 @@ export default function BuyerDashboard() {
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cropCount, setCropCount] = useState(0);
-  
-const fetchCropCount = async () => {
-  try {
-    const token = localStorage.getItem("token");
+  const [nearbyFarmersCount, setNearbyFarmersCount] = useState(null);
 
-    const response = await fetch("/api/crops/browse", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  const fetchCropCount = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-    const data = await response.json();
+      const response = await fetch("/api/crops/browse", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (response.ok) {
-      setCropCount(data.length);
+      const data = await response.json();
+
+      if (response.ok) {
+        setCropCount(data.length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch crop count:", error);
     }
-  } catch (error) {
-    console.error("Failed to fetch crop count:", error);
-  }
-};
+  };
+
+  const fetchNearbyFarmers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      if (typeof window !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            try {
+              const res = await fetch(
+                `/api/farmers/nearby?lat=${latitude}&lng=${longitude}`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                }
+              );
+              const data = await res.json();
+              if (res.ok) {
+                setNearbyFarmersCount(data.count ?? 0);
+                return;
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          },
+          async () => {
+            // Geolocation fallback
+            try {
+              const res = await fetch("/api/farmers/nearby", {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const data = await res.json();
+              if (res.ok) {
+                setNearbyFarmersCount(data.count ?? 0);
+              }
+            } catch (err) {
+              console.error(err);
+              setNearbyFarmersCount(0);
+            }
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        const res = await fetch("/api/farmers/nearby", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setNearbyFarmersCount(data.count ?? 0);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch nearby farmers count:", error);
+      setNearbyFarmersCount(0);
+    }
+  };
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  const storedUser = localStorage.getItem("user");
+    const token = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
 
-  if (!token || !storedUser) {
-    router.push("/login");
-    return;
-  }
+    if (!token || !storedUser) {
+      router.push("/login");
+      return;
+    }
 
-  let parsedUser;
+    let parsedUser;
 
-  try {
-    parsedUser = JSON.parse(storedUser);
-  } catch {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    router.push("/login");
-    return;
-  }
+    try {
+      parsedUser = JSON.parse(storedUser);
+    } catch {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      router.push("/login");
+      return;
+    }
 
-  if (parsedUser.role !== "buyer") {
-    router.push("/login");
-    return;
-  }
+    if (parsedUser.role !== "buyer") {
+      router.push("/login");
+      return;
+    }
 
-  setUser(parsedUser);
-  fetchCropCount();
-}, [router]);
+    setUser(parsedUser);
+    fetchCropCount();
+    fetchNearbyFarmers();
+  }, [router]);
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -94,7 +153,7 @@ const fetchCropCount = async () => {
             </p>
           </div>
 
-          <div className="rounded-full bg-white px-5 py-3 font-medium text-slate-700 shadow-sm">
+          <div className="rounded-full bg-white px-5 py-3 font-medium text-slate-700 shadow-sm mr-28 sm:mr-32">
             👤 {user.name}
           </div>
 
@@ -115,11 +174,11 @@ const fetchCropCount = async () => {
 
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <p className="text-sm text-slate-500">
-              {"Nearby Farmers(<10km)".toString()}
+              Nearby Farmers (&lt; 10 km)
             </p>
 
             <h2 className="mt-2 text-3xl font-bold text-green-700">
-              -
+              {nearbyFarmersCount !== null ? nearbyFarmersCount : "..."}
             </h2>
           </div>
 
