@@ -183,9 +183,8 @@ export default function BuyerBrowseCropsPage() {
             </p>
 
             {buyerLocation && (
-              <p className="mt-2 text-xs text-slate-400">
-                Your location: {buyerLocation.latitude.toFixed(4)},{" "}
-                {buyerLocation.longitude.toFixed(4)}
+              <p className="mt-2 text-xs text-green-700">
+                📍 Showing farmers nearest to your location
               </p>
             )}
           </div>

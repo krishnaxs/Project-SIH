@@ -23,62 +23,105 @@ export async function GET(request) {
       );
     }
 
-    // Call OpenStreetMap Nominatim with timeout and descriptive User-Agent
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    let formattedAddress = "";
+    let city = "";
+    let state = "";
+    let postcode = "";
+    let country = "";
 
-    const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
+    // 1. Try BigDataCloud (fast, highly reliable, zero rate limits)
+    try {
+      const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
+      const bdcRes = await fetch(bdcUrl, { signal: AbortSignal.timeout(3500) });
+      if (bdcRes.ok) {
+        const bdcData = await bdcRes.json();
+        city = bdcData.city || bdcData.locality || "";
+        state = bdcData.principalSubdivision || "";
+        postcode = bdcData.postcode || "";
+        country = bdcData.countryName || "";
 
-    const response = await fetch(nominatimUrl, {
-      headers: {
-        "User-Agent": "KrishiConnect-App/1.0 (krishiconnect@example.com)",
-        "Accept-Language": "en",
-      },
-      signal: controller.signal,
-    });
+        const adminList = bdcData.localityInfo?.administrative || [];
+        const districtObj = adminList.find(
+          (a) => a.adminLevel === 5 || a.description?.includes("district")
+        );
+        const district = districtObj?.name || "";
 
-    clearTimeout(timeout);
+        const parts = [
+          bdcData.locality,
+          city !== bdcData.locality ? city : null,
+          district && district !== city ? district : null,
+          state,
+          postcode,
+          country,
+        ].filter(Boolean);
 
-    if (!response.ok) {
-      throw new Error(`Nominatim responded with status ${response.status}`);
+        const uniqueParts = parts.filter((item, i) => parts.indexOf(item) === i);
+        if (uniqueParts.length > 0) {
+          formattedAddress = uniqueParts.join(", ");
+        }
+      }
+    } catch (bdcErr) {
+      console.warn("BigDataCloud geocode failed:", bdcErr?.message);
     }
 
-    const data = await response.json();
-    const addr = data.address || {};
+    // 2. Try OpenStreetMap Nominatim for street/locality details if available
+    try {
+      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
+      const nomRes = await fetch(nominatimUrl, {
+        headers: {
+          "User-Agent": "KrishiConnect-App/1.0 (krishiconnect@example.com)",
+          "Accept-Language": "en",
+        },
+        signal: AbortSignal.timeout(3500),
+      });
 
-    // Build a clean, readable Indian / Global address
-    const parts = [
-      addr.suburb || addr.neighbourhood || addr.road,
-      addr.city || addr.town || addr.village || addr.county,
-      addr.state_district,
-      addr.state,
-      addr.postcode,
-      addr.country,
-    ].filter(Boolean);
+      if (nomRes.ok) {
+        const data = await nomRes.json();
+        const addr = data.address || {};
+        const nomParts = [
+          addr.suburb || addr.neighbourhood || addr.road,
+          addr.city || addr.town || addr.village || addr.county || city,
+          addr.state_district,
+          addr.state || state,
+          addr.postcode || postcode,
+          addr.country || country,
+        ].filter(Boolean);
 
-    // Remove duplicates while preserving order
-    const cleanParts = parts.filter((item, index) => parts.indexOf(item) === index);
-    const formattedAddress = cleanParts.length > 0 ? cleanParts.join(", ") : data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        const cleanNom = nomParts.filter((item, i) => nomParts.indexOf(item) === i);
+        if (cleanNom.length > 0) {
+          formattedAddress = cleanNom.join(", ");
+          if (addr.city || addr.town || addr.village) city = addr.city || addr.town || addr.village;
+          if (addr.state) state = addr.state;
+          if (addr.postcode) postcode = addr.postcode;
+          if (addr.country) country = addr.country;
+        }
+      }
+    } catch (nomErr) {
+      console.warn("Nominatim geocode failed:", nomErr?.message);
+    }
+
+    if (!formattedAddress) {
+      formattedAddress = "Current Location (Please enter street address)";
+    }
 
     return NextResponse.json({
       address: formattedAddress,
-      city: addr.city || addr.town || addr.village || "",
-      state: addr.state || "",
-      postcode: addr.postcode || "",
-      country: addr.country || "",
+      city,
+      state,
+      postcode,
+      country,
       latitude,
       longitude,
     });
   } catch (error) {
     console.error("Reverse geocoding error:", error);
 
-    // Graceful fallback to formatted coordinate representation
     const { searchParams } = new URL(request.url);
     const lat = parseFloat(searchParams.get("lat") || 0);
     const lng = parseFloat(searchParams.get("lng") || 0);
 
     return NextResponse.json({
-      address: `Near ${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E`,
+      address: "Current Location (Please enter street address)",
       latitude: lat,
       longitude: lng,
       fallback: true,

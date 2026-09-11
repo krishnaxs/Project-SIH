@@ -135,7 +135,7 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-slate-600">
           Don't have an account?{" "}
           <button
-            onClick={() => router.push("/register/farmer")}
+            onClick={() => router.push("/")}
             className="font-semibold text-green-700 hover:text-green-800"
           >
             Register

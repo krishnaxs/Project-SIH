@@ -157,27 +157,65 @@ export default function RegisterPage() {
             `/api/location/reverse?lat=${latitude}&lng=${longitude}`
           );
           const geoData = await res.json();
-          const resolvedAddress =
-            geoData.address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          let resolvedAddress = geoData.address || "";
+
+          if (!resolvedAddress || resolvedAddress.startsWith("Current Location")) {
+            try {
+              const bdc = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+              );
+              if (bdc.ok) {
+                const bdcData = await bdc.json();
+                const parts = [
+                  bdcData.locality,
+                  bdcData.city !== bdcData.locality ? bdcData.city : null,
+                  bdcData.principalSubdivision,
+                  bdcData.countryName,
+                ].filter(Boolean);
+                if (parts.length > 0) {
+                  resolvedAddress = parts.join(", ");
+                }
+              }
+            } catch {}
+          }
 
           setLocation({
             latitude,
             longitude,
-            address: resolvedAddress,
-            city: geoData.city,
-            state: geoData.state,
-            pincode: geoData.postcode,
+            address:
+              resolvedAddress || "Current Location (Please enter your address)",
+            city: geoData.city || "",
+            state: geoData.state || "",
+            pincode: geoData.postcode || "",
           });
 
           setMessage("Location and address captured successfully!");
         } catch (err) {
           console.error("Reverse geocoding failed:", err);
+          let clientResolved = "";
+          try {
+            const bdc = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            if (bdc.ok) {
+              const bdcData = await bdc.json();
+              const parts = [
+                bdcData.locality,
+                bdcData.city !== bdcData.locality ? bdcData.city : null,
+                bdcData.principalSubdivision,
+                bdcData.countryName,
+              ].filter(Boolean);
+              if (parts.length > 0) clientResolved = parts.join(", ");
+            }
+          } catch {}
+
           setLocation({
             latitude,
             longitude,
-            address: `Near ${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`,
+            address:
+              clientResolved || "Current Location (Please enter your address)",
           });
-          setMessage("Coordinates captured. You can edit your address below.");
+          setMessage("Location captured. Please refine your street address below.");
         } finally {
           setDetectingLocation(false);
         }
@@ -438,9 +476,8 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <div className="flex justify-between border-t border-green-200/60 pt-1.5 text-xs text-slate-500">
-                <span>Latitude: {location.latitude.toFixed(4)}° N</span>
-                <span>Longitude: {location.longitude.toFixed(4)}° E</span>
+              <div className="flex items-center gap-1.5 border-t border-green-200/60 pt-1.5 text-xs text-green-700">
+                <span>✓ Address captured via GPS</span>
               </div>
             </div>
           )}

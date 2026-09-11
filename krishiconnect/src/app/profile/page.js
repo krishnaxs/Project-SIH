@@ -218,9 +218,13 @@ export default function ProfilePage() {
         };
         setCoordinates(coords);
 
-        // Auto-resolve legacy "Location captured" or missing address if coords exist
+        // Auto-resolve legacy "Location captured", coordinate strings, or missing address if coords exist
         if (
-          (!initialAddress || initialAddress.trim() === "Location captured") &&
+          (!initialAddress ||
+            initialAddress.trim() === "Location captured" ||
+            initialAddress.includes("° N") ||
+            initialAddress.includes("° S") ||
+            initialAddress.startsWith("Near ")) &&
           coords.latitude &&
           coords.longitude
         ) {
@@ -230,7 +234,7 @@ export default function ProfilePage() {
             );
             if (geoRes.ok) {
               const geoData = await geoRes.json();
-              if (geoData.address) {
+              if (geoData.address && !geoData.address.includes("° N")) {
                 initialAddress = geoData.address;
               }
             }
@@ -301,7 +305,7 @@ export default function ProfilePage() {
 
     setLocating(true);
     setError("");
-    setMessage("Detecting current GPS coordinates...");
+    setMessage("Detecting current address...");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -313,24 +317,62 @@ export default function ProfilePage() {
             `/api/location/reverse?lat=${latitude}&lng=${longitude}`
           );
           const geoData = await res.json();
-          const resolvedAddress =
-            geoData.address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          let resolvedAddress = geoData.address || "";
+
+          if (!resolvedAddress || resolvedAddress.startsWith("Current Location")) {
+            try {
+              const bdc = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+              );
+              if (bdc.ok) {
+                const bdcData = await bdc.json();
+                const parts = [
+                  bdcData.locality,
+                  bdcData.city !== bdcData.locality ? bdcData.city : null,
+                  bdcData.principalSubdivision,
+                  bdcData.countryName,
+                ].filter(Boolean);
+                if (parts.length > 0) {
+                  resolvedAddress = parts.join(", ");
+                }
+              }
+            } catch {}
+          }
 
           setFormData((prev) => ({
             ...prev,
-            address: resolvedAddress,
+            address:
+              resolvedAddress || "Current Location (Please enter street address)",
           }));
           setMessage(
-            "Address resolved from GPS! Click 'Save Changes' to update your profile."
+            "Address resolved! Click 'Save Changes' to update your profile."
           );
         } catch (err) {
           console.error("Reverse geocoding failed:", err);
+          let clientResolved = "";
+          try {
+            const bdc = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            if (bdc.ok) {
+              const bdcData = await bdc.json();
+              const parts = [
+                bdcData.locality,
+                bdcData.city !== bdcData.locality ? bdcData.city : null,
+                bdcData.principalSubdivision,
+                bdcData.countryName,
+              ].filter(Boolean);
+              if (parts.length > 0) clientResolved = parts.join(", ");
+            }
+          } catch {}
+
           setFormData((prev) => ({
             ...prev,
-            address: `Near ${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`,
+            address:
+              clientResolved || "Current Location (Please enter street address)",
           }));
           setMessage(
-            "Coordinates captured. You can refine your address in the box."
+            "Location captured. Please refine your street address below."
           );
         } finally {
           setLocating(false);
@@ -654,8 +696,8 @@ export default function ProfilePage() {
                 className="w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-green-600 focus:ring-2 focus:ring-green-100"
               />
               {coordinates.latitude && coordinates.longitude && (
-                <p className="mt-1 text-xs text-slate-400">
-                  GPS Coordinates: {coordinates.latitude.toFixed(4)}° N, {coordinates.longitude.toFixed(4)}° E
+                <p className="mt-1 text-xs text-green-700">
+                  ✓ Location verified
                 </p>
               )}
             </div>

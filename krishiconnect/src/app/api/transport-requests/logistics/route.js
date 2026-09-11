@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
 import connectDB from "@/lib/mongodb";
-import TransportRequest from "@/models/TransportRequest";
+import User from "@/models/User";
+import Vehicle from "@/models/Vehicle";
+import Crop from "@/models/Crop";
 import CropRequest from "@/models/CropRequest";
+import TransportRequest from "@/models/TransportRequest";
 
 export async function GET(request) {
   try {

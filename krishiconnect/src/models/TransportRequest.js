@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+import "@/models/User";
+import "@/models/Vehicle";
+import "@/models/CropRequest";
 
 const transportRequestSchema = new mongoose.Schema(
   {

@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import "@/models/User";
+import "@/models/Crop";
 
 const cropRequestSchema = new mongoose.Schema(
   {

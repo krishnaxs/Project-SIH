@@ -14,10 +14,12 @@ export default function BuyerTransportRequestsPage() {
     fetchRequests();
   }, []);
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (retryCount = 0) => {
     try {
-      setLoading(true);
-      setMessage("");
+      if (retryCount === 0) {
+        setLoading(true);
+        setMessage("");
+      }
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -37,6 +39,10 @@ export default function BuyerTransportRequestsPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (retryCount < 2) {
+          await new Promise((res) => setTimeout(res, 600));
+          return fetchRequests(retryCount + 1);
+        }
         setMessage(
           data.message || "Failed to load transport requests."
         );
@@ -44,9 +50,14 @@ export default function BuyerTransportRequestsPage() {
       }
 
       setRequests(data);
+      setMessage("");
     } catch (error) {
       console.error(error);
-      setMessage("Something went wrong.");
+      if (retryCount < 2) {
+        await new Promise((res) => setTimeout(res, 600));
+        return fetchRequests(retryCount + 1);
+      }
+      setMessage("Failed to load transport requests. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -95,7 +106,7 @@ export default function BuyerTransportRequestsPage() {
             </div>
 
             <button
-                onClick={fetchRequests}
+                onClick={() => fetchRequests(0)}
                 className="rounded-lg bg-green-700 px-4 py-2 font-semibold text-white hover:bg-green-800"
             >
                 ↻ Refresh
@@ -103,7 +114,8 @@ export default function BuyerTransportRequestsPage() {
             </div>
 
         {loading && (
-          <div className="rounded-xl p-8 text-center shadow-sm text-red-900 border-none">
+          <div className="rounded-xl bg-white p-8 text-center text-slate-600 shadow-sm">
+            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-green-200 border-t-green-700"></div>
             Loading transport requests...
           </div>
         )}

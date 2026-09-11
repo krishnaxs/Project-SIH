@@ -409,19 +409,11 @@ export default function LogisticsRequestsPage() {
                             </p>
 
                             {hasPickup ? (
-                              <>
-                                <p className="mt-1 text-sm text-slate-600">
-                                  📍{" "}
-                                  {pickup.address ||
-                                    "Farmer location"}
-                                </p>
-
-                                <p className="mt-1 text-xs text-slate-500">
-                                  Lat: {pickup.latitude}
-                                  <br />
-                                  Lng: {pickup.longitude}
-                                </p>
-                              </>
+                              <p className="mt-1 text-sm text-slate-600">
+                                📍{" "}
+                                {pickup.address ||
+                                  "Farmer location"}
+                              </p>
                             ) : (
                               <p className="mt-2 text-sm font-semibold text-red-600">
                                 ⚠️ Pickup location not available
@@ -440,19 +432,11 @@ export default function LogisticsRequestsPage() {
                             </p>
 
                             {hasDelivery ? (
-                              <>
-                                <p className="mt-1 text-sm text-slate-600">
-                                  📍{" "}
-                                  {delivery.address ||
-                                    "Buyer location"}
-                                </p>
-
-                                <p className="mt-1 text-xs text-slate-500">
-                                  Lat: {delivery.latitude}
-                                  <br />
-                                  Lng: {delivery.longitude}
-                                </p>
-                              </>
+                              <p className="mt-1 text-sm text-slate-600">
+                                📍{" "}
+                                {delivery.address ||
+                                  "Buyer location"}
+                              </p>
                             ) : (
                               <p className="mt-2 text-sm font-semibold text-red-600">
                                 ⚠️ Delivery location not available
