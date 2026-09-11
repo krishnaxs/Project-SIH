@@ -1,0 +1,33 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Ignore large offline training and experiment models (1.85 GB)
+models/price_model.pkl
+models/demand_model.pkl
+models/direct_forecast/
+models/forecasting_price_model.pkl
+models/forecasting_price_model_v2.pkl
+models/improved_price_model.pkl
+
+# Ignore offline training and evaluation scripts
+train_*.py
+validate_*.py
+test_*.py
+improve_*.py
+collect_*.py
+preprocess_*.py
+check_*.py
+future_*.py
+
+# Git & IDE files
+.git
+.gitignore
+.vscode
+.idea
+

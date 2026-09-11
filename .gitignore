@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.*
+
+# Testing
+/coverage
+
+# Next.js & Build
+.next/
+/out/
+/build
+.turbo/
+
+# Environment Variables
+.env
+.env*.local
+.env.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python & AI
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Exclude large offline training models (> 100MB, not used in live app)
+**/ai/models/price_model.pkl
+**/ai/models/demand_model.pkl
+**/ai/models/direct_forecast/
+**/ai/models/forecasting_price_model*.pkl
+**/ai/models/improved_price_model.pkl
+
+# Operating System & IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Vercel
+.vercel
