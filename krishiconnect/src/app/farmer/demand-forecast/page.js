@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   CalendarDays,
@@ -18,6 +19,7 @@ import {
 
 
 export default function DemandForecastPage() {
+  const router = useRouter();
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -205,6 +207,13 @@ export default function DemandForecastPage() {
       <div className="border-b border-gray-200 bg-white">
 
         <div className="mx-auto max-w-7xl px-6 py-8 md:px-10">
+
+          <button
+            onClick={() => router.push("/farmer/dashboard")}
+            className="mb-6 text-sm font-semibold text-green-700 hover:text-green-800"
+          >
+            ← Back to Dashboard
+          </button>
 
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
