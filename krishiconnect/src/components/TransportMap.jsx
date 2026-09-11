@@ -252,37 +252,69 @@ export default function TransportMap({
     <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
       <div ref={mapRef} className="h-96 w-full" />
 
-      <div className="grid gap-2 border-t border-slate-200 bg-white px-4 py-3 text-sm sm:grid-cols-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🟢</span>
-          <span>
-            <strong>Pickup</strong>
-            <br />
-            {pickupLabel}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🔴</span>
-          <span>
-            <strong>Delivery</strong>
-            <br />
-            {deliveryLabel}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🔵</span>
-          <span>
-            <strong>Vehicle</strong>
-            <br />
-            {vehicleNumber || vehicleLabel}
-          </span>
+      {/* Route & Transport Summary Info */}
+      <div className="border-t border-slate-200 bg-white p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+
+          {/* Pickup Point */}
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 shadow-xs transition hover:bg-emerald-50/70">
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 shadow-xs">
+              <span className="h-3 w-3 rounded-full bg-emerald-600 ring-4 ring-emerald-200/80"></span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-xs font-bold uppercase tracking-wider text-emerald-800">
+                Pickup Point
+              </span>
+              <span className="mt-0.5 block truncate text-sm font-bold text-slate-900">
+                {pickupLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Delivery Point */}
+          <div className="flex items-start gap-3 rounded-xl border border-rose-100 bg-rose-50/40 p-3 shadow-xs transition hover:bg-rose-50/70">
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700 shadow-xs">
+              <span className="h-3 w-3 rounded-full bg-rose-600 ring-4 ring-rose-200/80"></span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-xs font-bold uppercase tracking-wider text-rose-800">
+                Delivery Point
+              </span>
+              <span className="mt-0.5 block truncate text-sm font-bold text-slate-900">
+                {deliveryLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Vehicle Info */}
+          <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/40 p-3 shadow-xs transition hover:bg-blue-50/70">
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 shadow-xs">
+              <span className="h-3 w-3 rounded-full bg-blue-600 ring-4 ring-blue-200/80"></span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-xs font-bold uppercase tracking-wider text-blue-800">
+                Vehicle Info
+              </span>
+              <span className="mt-0.5 block truncate text-sm font-bold text-slate-900">
+                {vehicleNumber ? `🚚 ${vehicleNumber}` : vehicleLabel}
+              </span>
+            </div>
+          </div>
+
         </div>
       </div>
 
+      {/* Live GPS Tracking Status Bar */}
       {tracking && (
-        <p className="border-t border-slate-200 px-4 py-2 text-sm text-slate-600">
-          {gpsMessage || "Starting live GPS sharing..."}
-        </p>
+        <div className="flex items-center gap-2.5 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-800">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-600"></span>
+          </span>
+          <span className="text-slate-800">
+            {gpsMessage || "Live GPS sharing active"}
+          </span>
+        </div>
       )}
     </div>
   );
