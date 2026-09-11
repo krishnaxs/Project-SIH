@@ -20,14 +20,18 @@ export async function POST(request) {
       );
     }
 
-    const user = await User.findOne({ email });
+    const cleanEmail = email.trim().toLowerCase();
+    let user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      user = await User.findOne({ email: email.trim() });
+    }
 
     if (!user) {
       return NextResponse.json(
         {
-          message: "Invalid email or password.",
+          message: "User doesn't exist, please register yourself.",
         },
-        { status: 401 }
+        { status: 404 }
       );
     }
 
@@ -39,7 +43,7 @@ export async function POST(request) {
     if (!passwordMatch) {
       return NextResponse.json(
         {
-          message: "Invalid email or password.",
+          message: "Incorrect password. Please try again.",
         },
         { status: 401 }
       );

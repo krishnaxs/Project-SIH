@@ -263,9 +263,26 @@ export default function LoginPage() {
         </form>
 
         {message && (
-          <p className="mt-5 text-center text-sm font-medium text-slate-700">
-            {message}
-          </p>
+          <div
+            className={`mt-5 rounded-lg p-3.5 text-center text-sm font-medium ${
+              message.toLowerCase().includes("successful")
+                ? "border border-green-200 bg-green-50 text-green-700"
+                : "border border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            <p>{message}</p>
+            {message.toLowerCase().includes("register yourself") && (
+              <div className="mt-2.5">
+                <button
+                  type="button"
+                  onClick={() => router.push("/")}
+                  className="inline-flex items-center gap-1 font-semibold text-green-800 underline underline-offset-2 hover:text-green-900"
+                >
+                  Register Now →
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         <p className="mt-6 text-center text-sm text-slate-600">
