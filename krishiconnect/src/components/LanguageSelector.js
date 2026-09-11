@@ -16,37 +16,35 @@ const LANGUAGES = [
   { code: "ml", name: "Malayalam", nativeName: "മലയാളം" },
 ];
 
+function getInitialLanguage() {
+  if (typeof window === "undefined") return "en";
+  try {
+    const match = document.cookie.match(/googtrans=\/en\/([a-z]{2})/i);
+    if (match && match[1]) {
+      const code = match[1].toLowerCase();
+      if (LANGUAGES.some((l) => l.code === code)) {
+        return code;
+      }
+    }
+    const saved = localStorage.getItem("krishi_language");
+    if (saved && LANGUAGES.some((l) => l.code === saved)) {
+      return saved;
+    }
+  } catch {
+    // Ignore errors during hydration
+  }
+  return "en";
+}
+
 export default function LanguageSelector() {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("en");
+  const [selectedLang, setSelectedLang] = useState(getInitialLanguage);
   const dropdownRef = useRef(null);
 
-  // Sync active language from cookie or localStorage
+  // Sync active language periodically so external resets are detected
   useEffect(() => {
-    const getActiveLang = () => {
-      try {
-        const match = document.cookie.match(/googtrans=\/en\/([a-z]{2})/i);
-        if (match && match[1]) {
-          const code = match[1].toLowerCase();
-          if (LANGUAGES.some((l) => l.code === code)) {
-            return code;
-          }
-        }
-        const saved = localStorage.getItem("krishi_language");
-        if (saved && LANGUAGES.some((l) => l.code === saved)) {
-          return saved;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      return "en";
-    };
-
-    setSelectedLang(getActiveLang());
-
-    // Keep checking so that if translation state resets, the dropdown syncs immediately
     const syncInterval = setInterval(() => {
-      const active = getActiveLang();
+      const active = getInitialLanguage();
       setSelectedLang((prev) => (prev !== active ? active : prev));
     }, 800);
 
