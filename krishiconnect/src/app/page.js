@@ -10,25 +10,25 @@ export default function Home() {
       {/* Transparent Farmland Background Image */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-15"
+        className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-55"
         style={{ backgroundImage: "url('/images/farmland-landscape.jpg')" }}
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-stone-50/70 via-transparent to-stone-50/80"
+        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-transparent via-transparent to-stone-50/70"
       />
 
       {/* Navbar */}
-      <nav className="relative z-10 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+      <nav className="relative z-10 border-b border-slate-900/10 bg-transparent">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-          <div className="text-2xl font-bold text-green-700">
+          <div className="text-2xl font-bold text-green-800 drop-shadow-sm">
             🌱 KrishiConnect
           </div>
 
           <div className="flex items-center gap-3 pr-28 sm:pr-32">
             <button
               onClick={() => router.push("/login")}
-              className="rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white transition hover:bg-green-800 shadow-sm hover:shadow"
+              className="rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white transition hover:bg-green-800 shadow-md hover:shadow-lg"
             >
               Login
             </button>
@@ -124,7 +124,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 w-full border-t border-slate-200 bg-slate-900 px-6 py-8 text-center text-sm text-slate-300">
+      <footer className="fixed bottom-0 w-full border-t border-slate-800 bg-slate-900/95 px-4 py-2.5 text-center text-xs text-slate-400">
         © 2026 KrishiConnect — Connecting Agriculture with Technology
       </footer>
     </main>
