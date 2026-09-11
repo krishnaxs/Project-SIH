@@ -19,7 +19,7 @@ export default function Home() {
       />
 
       {/* Navbar */}
-      <nav className="relative z-10 border-b border-slate-900/10 bg-transparent">
+      <nav className="relative z-10 bg-transparent">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
           <div className="text-2xl font-bold text-green-800 drop-shadow-sm">
             🌱 KrishiConnect

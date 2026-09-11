@@ -155,8 +155,19 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+    <main className="relative flex min-h-screen items-center justify-center bg-stone-50 px-4 py-10">
+      {/* Transparent Farmland Background Image */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-55"
+        style={{ backgroundImage: "url('/images/farmland-landscape.jpg')" }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-transparent via-transparent to-stone-50/70"
+      />
+
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-200/80 bg-white/95 p-8 shadow-xl backdrop-blur-sm">
 
         <button
           onClick={() => router.push("/")}
