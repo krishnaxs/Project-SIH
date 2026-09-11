@@ -39,7 +39,7 @@ export async function GET(request) {
   .populate({
     path: "vehicle",
     match: { owner: decoded.id },
-    select: "vehicleType vehicleNumber capacity capacityUnit ratePerKm",
+    select: "vehicleType vehicleNumber capacity capacityUnit ratePerKm location",
   })
   .populate("requester", "name phone email role location")
   .populate({

@@ -47,12 +47,27 @@ function hasCoordinates(location) {
   );
 }
 
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(1));
+}
+
 export default function TransportMap({
   requestId,
   pickup,
   delivery,
   liveLocation,
   routeCoordinates = [],
+  routeDistance = null,
   tracking = false,
   pickupLabel = "Farmer / Pickup",
   deliveryLabel = "Buyer / Delivery",
@@ -63,6 +78,97 @@ export default function TransportMap({
   const mapInstance = useRef(null);
   const layersRef = useRef(null);
   const [gpsMessage, setGpsMessage] = useState("");
+  const [driverLoc, setDriverLoc] = useState(() =>
+    hasCoordinates(liveLocation) ? liveLocation : null
+  );
+  const [driverToSellerRoute, setDriverToSellerRoute] = useState(null);
+  const [fetchingRoute, setFetchingRoute] = useState(false);
+
+  // Sync liveLocation prop changes
+  useEffect(() => {
+    if (hasCoordinates(liveLocation)) {
+      setDriverLoc(liveLocation);
+    }
+  }, [liveLocation]);
+
+  // One-time browser geolocation if no driver location provided
+  useEffect(() => {
+    if (!driverLoc && typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setDriverLoc({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 6000 }
+      );
+    }
+  }, [driverLoc]);
+
+  // Fetch shortest driving route between Driver and Seller (Farmer / Pickup)
+  useEffect(() => {
+    const activeDriver = driverLoc || (hasCoordinates(liveLocation) ? liveLocation : null);
+    if (!hasCoordinates(activeDriver) || !hasCoordinates(pickup)) return;
+
+    let cancelled = false;
+
+    const fetchShortestPath = async () => {
+      try {
+        setFetchingRoute(true);
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${activeDriver.longitude},${activeDriver.latitude};${pickup.longitude},${pickup.latitude}?overview=full&geometries=geojson`;
+        const res = await fetch(osrmUrl, {
+          headers: { Accept: "application/json" },
+        });
+
+        if (!res.ok) throw new Error("OSRM routing service failed");
+        const data = await res.json();
+        const route = data.routes?.[0];
+
+        if (!cancelled && route) {
+          const dist = Number((route.distance / 1000).toFixed(1));
+          const dur = Math.ceil(route.duration / 60);
+          setDriverToSellerRoute({
+            coordinates: route.geometry.coordinates,
+            distance: dist,
+            duration: dur,
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const directDist = calculateDistance(
+            activeDriver.latitude,
+            activeDriver.longitude,
+            pickup.latitude,
+            pickup.longitude
+          );
+          setDriverToSellerRoute({
+            coordinates: [
+              [activeDriver.longitude, activeDriver.latitude],
+              [pickup.longitude, pickup.latitude],
+            ],
+            distance: directDist,
+            duration: Math.max(1, Math.ceil((directDist / 40) * 60)),
+          });
+        }
+      } finally {
+        if (!cancelled) setFetchingRoute(false);
+      }
+    };
+
+    fetchShortestPath();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    driverLoc?.latitude,
+    driverLoc?.longitude,
+    pickup?.latitude,
+    pickup?.longitude,
+    liveLocation,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,7 +212,14 @@ export default function TransportMap({
   useEffect(() => {
     if (window.L && mapInstance.current) draw(window.L);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, delivery, liveLocation, routeCoordinates]);
+  }, [
+    pickup,
+    delivery,
+    liveLocation,
+    driverLoc,
+    routeCoordinates,
+    driverToSellerRoute,
+  ]);
 
   function draw(L) {
     if (!mapInstance.current || !layersRef.current) return;
@@ -131,37 +244,98 @@ export default function TransportMap({
 
       L.marker(p, { icon: createIcon(emoji, background) })
         .bindPopup(
-          `<div style="min-width:180px"><strong>${title}</strong>${details ? `<br/><span>${details}</span>` : ""}<br/><small>${p[0].toFixed(5)}, ${p[1].toFixed(5)}</small></div>`
+          `<div style="min-width:180px"><strong style="color:#0f172a">${title}</strong>${
+            details ? `<br/><span style="color:#475569">${details}</span>` : ""
+          }<br/><small style="color:#64748b">${p[0].toFixed(5)}, ${p[1].toFixed(5)}</small></div>`
         )
         .addTo(layersRef.current);
     };
 
+    // Seller (Pickup Point)
     addMarker(
       pickup,
       pickupLabel,
       "🌾",
       "#16a34a",
-      pickup?.address || "Farmer crop pickup point"
+      pickup?.address || "Farmer / Seller crop pickup point"
     );
 
+    // Buyer (Delivery Point)
     addMarker(
       delivery,
       deliveryLabel,
       "📦",
       "#dc2626",
-      delivery?.address || "Buyer delivery point"
+      delivery?.address || "Buyer delivery destination"
     );
 
+    // Driver (Vehicle Live Location)
+    const activeDriver = driverLoc || liveLocation;
     addMarker(
-      liveLocation,
-      vehicleLabel,
+      activeDriver,
+      vehicleLabel || "Driver (Live Location)",
       "🚚",
       "#2563eb",
-      vehicleNumber ? `Vehicle ${vehicleNumber}` : "Current logistics GPS location"
+      vehicleNumber
+        ? `Driver / Vehicle ${vehicleNumber}`
+        : "Current Driver GPS Position"
     );
 
+    // 1. Draw Shortest Path: Driver -> Seller (Navigational Blue Road Route)
+    if (driverToSellerRoute?.coordinates?.length) {
+      const driverPoints = driverToSellerRoute.coordinates.map(([lng, lat]) => [
+        Number(lat),
+        Number(lng),
+      ]);
+
+      if (driverPoints.length >= 2) {
+        // Dark blue casing
+        L.polyline(driverPoints, {
+          color: "#1e40af",
+          weight: 7,
+          opacity: 0.95,
+        }).addTo(layersRef.current);
+
+        // Core bright blue road line
+        L.polyline(driverPoints, {
+          color: "#3b82f6",
+          weight: 5,
+          opacity: 1,
+        })
+          .bindPopup(
+            `<div style="min-width:190px"><strong style="color:#1e40af">Shortest Path: Driver ➔ Seller</strong><br/>Distance: <b>${driverToSellerRoute.distance} km</b><br/>Est. Driving Time: <b>~${driverToSellerRoute.duration} mins</b></div>`
+          )
+          .addTo(layersRef.current);
+
+        // Directional dash
+        L.polyline(driverPoints, {
+          color: "#dbeafe",
+          weight: 2,
+          opacity: 1,
+          dashArray: "6, 10",
+        }).addTo(layersRef.current);
+
+        points.push(...driverPoints);
+      }
+    } else if (hasCoordinates(activeDriver) && hasCoordinates(pickup)) {
+      const directLine = [
+        [Number(activeDriver.latitude), Number(activeDriver.longitude)],
+        [Number(pickup.latitude), Number(pickup.longitude)],
+      ];
+      L.polyline(directLine, {
+        color: "#2563eb",
+        weight: 4,
+        opacity: 0.85,
+        dashArray: "8, 8",
+      })
+        .bindPopup("Shortest Direct Path: Driver ➔ Seller")
+        .addTo(layersRef.current);
+      points.push(...directLine);
+    }
+
+    // 2. Draw Delivery Route: Seller -> Buyer (Emerald Green Road Route)
     if (Array.isArray(routeCoordinates) && routeCoordinates.length) {
-      const line = routeCoordinates
+      const deliveryLine = routeCoordinates
         .filter(
           (pair) =>
             Array.isArray(pair) &&
@@ -171,9 +345,15 @@ export default function TransportMap({
         )
         .map(([lng, lat]) => [Number(lat), Number(lng)]);
 
-      if (line.length >= 2) {
-        L.polyline(line, { weight: 5 }).addTo(layersRef.current);
-        points.push(...line);
+      if (deliveryLine.length >= 2) {
+        L.polyline(deliveryLine, {
+          color: "#15803d",
+          weight: 5,
+          opacity: 0.85,
+        })
+          .bindPopup("Delivery Route: Seller ➔ Buyer")
+          .addTo(layersRef.current);
+        points.push(...deliveryLine);
       }
     }
 
@@ -189,11 +369,12 @@ export default function TransportMap({
       mapInstance.current.setView(validPoints[0], 14);
     } else if (validPoints.length > 1) {
       mapInstance.current.fitBounds(validPoints, {
-        padding: [40, 40],
+        padding: [45, 45],
       });
     }
   }
 
+  // Live GPS tracking watcher
   useEffect(() => {
     if (!tracking || !requestId || !navigator.geolocation) return;
 
@@ -201,6 +382,12 @@ export default function TransportMap({
 
     const watchId = navigator.geolocation.watchPosition(
       async (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        setDriverLoc(coords);
+
         const now = Date.now();
         if (now - lastSent < 5000) return;
         lastSent = now;
@@ -217,10 +404,7 @@ export default function TransportMap({
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
               },
-              body: JSON.stringify({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              }),
+              body: JSON.stringify(coords),
             }
           );
 
@@ -249,21 +433,50 @@ export default function TransportMap({
   }, [tracking, requestId]);
 
   return (
-    <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+    <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
       <div ref={mapRef} className="h-96 w-full" />
 
-      {/* Route & Transport Summary Info */}
+      {/* Navigation Routes Summary Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 bg-slate-900 px-4 py-3 text-white">
+        <div className="flex items-center gap-2">
+          <span className="flex h-3 w-3 items-center justify-center rounded-full bg-blue-500 ring-4 ring-blue-500/30"></span>
+          <span className="text-xs font-semibold text-blue-200">
+            Shortest Path (Driver ➔ Seller):
+          </span>
+          <span className="rounded-md bg-blue-500/20 px-2 py-0.5 text-xs font-bold text-blue-300">
+            {driverToSellerRoute?.distance
+              ? `${driverToSellerRoute.distance} km • ~${driverToSellerRoute.duration} mins`
+              : fetchingRoute
+              ? "Calculating road route..."
+              : "Locating driver..."}
+          </span>
+        </div>
+
+        {routeDistance && (
+          <div className="flex items-center gap-2">
+            <span className="flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500 ring-4 ring-emerald-500/30"></span>
+            <span className="text-xs font-semibold text-emerald-200">
+              Delivery Route (Seller ➔ Buyer):
+            </span>
+            <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-300">
+              {routeDistance} km
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Route & Transport Party Cards */}
       <div className="border-t border-slate-200 bg-white p-4">
         <div className="grid gap-3 sm:grid-cols-3">
 
-          {/* Pickup Point */}
+          {/* Pickup Point (Seller / Farmer) */}
           <div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 shadow-xs transition hover:bg-emerald-50/70">
             <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 shadow-xs">
               <span className="h-3 w-3 rounded-full bg-emerald-600 ring-4 ring-emerald-200/80"></span>
             </div>
             <div className="min-w-0 flex-1">
               <span className="block text-xs font-bold uppercase tracking-wider text-emerald-800">
-                Pickup Point
+                Seller (Pickup Point)
               </span>
               <span className="mt-0.5 block truncate text-sm font-bold text-slate-900">
                 {pickupLabel}
@@ -271,14 +484,14 @@ export default function TransportMap({
             </div>
           </div>
 
-          {/* Delivery Point */}
+          {/* Delivery Point (Buyer) */}
           <div className="flex items-start gap-3 rounded-xl border border-rose-100 bg-rose-50/40 p-3 shadow-xs transition hover:bg-rose-50/70">
             <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700 shadow-xs">
               <span className="h-3 w-3 rounded-full bg-rose-600 ring-4 ring-rose-200/80"></span>
             </div>
             <div className="min-w-0 flex-1">
               <span className="block text-xs font-bold uppercase tracking-wider text-rose-800">
-                Delivery Point
+                Buyer (Delivery Point)
               </span>
               <span className="mt-0.5 block truncate text-sm font-bold text-slate-900">
                 {deliveryLabel}
@@ -286,18 +499,23 @@ export default function TransportMap({
             </div>
           </div>
 
-          {/* Vehicle Info */}
+          {/* Vehicle & Driver Info */}
           <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/40 p-3 shadow-xs transition hover:bg-blue-50/70">
             <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 shadow-xs">
               <span className="h-3 w-3 rounded-full bg-blue-600 ring-4 ring-blue-200/80"></span>
             </div>
             <div className="min-w-0 flex-1">
               <span className="block text-xs font-bold uppercase tracking-wider text-blue-800">
-                Vehicle Info
+                Driver & Vehicle
               </span>
               <span className="mt-0.5 block truncate text-sm font-bold text-slate-900">
                 {vehicleNumber ? `🚚 ${vehicleNumber}` : vehicleLabel}
               </span>
+              {driverToSellerRoute?.distance && (
+                <span className="mt-0.5 block text-xs font-semibold text-blue-700">
+                  📍 {driverToSellerRoute.distance} km from seller
+                </span>
+              )}
             </div>
           </div>
 

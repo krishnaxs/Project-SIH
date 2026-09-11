@@ -624,11 +624,15 @@ export default function LogisticsRequestsPage() {
                             pickup={pickup}
                             delivery={delivery}
                             liveLocation={
-                              request.liveLocation
+                              request.liveLocation ||
+                              request.vehicle?.location
                             }
                             routeCoordinates={
                               request.route
                                 ?.coordinates || []
+                            }
+                            routeDistance={
+                              request.route?.distance
                             }
                             pickupLabel={`🌾 Farmer: ${farmerName}`}
                             deliveryLabel={`📦 Buyer: ${buyerName}`}
