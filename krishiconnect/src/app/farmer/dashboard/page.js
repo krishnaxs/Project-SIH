@@ -237,7 +237,7 @@ export default function FarmerDashboard() {
               <div className="text-4xl">🌾</div>
 
               <h3 className="mt-4 text-xl font-bold text-slate-900">
-                Browse Crops
+                All Crops
               </h3>
 
               <p className="mt-2 leading-6 text-slate-600">

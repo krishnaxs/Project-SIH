@@ -73,6 +73,20 @@ export async function POST(request) {
 
     // If new user, create account
     const userRole = role || "farmer";
+
+    const hasValidLocation =
+      location &&
+      Number.isFinite(Number(location.latitude)) &&
+      Number.isFinite(Number(location.longitude)) &&
+      String(location.address || "").trim();
+
+    if (!hasValidLocation) {
+      return NextResponse.json(
+        { message: "A valid location is required to register." },
+        { status: 400 }
+      );
+    }
+
     const randomPassword = await bcrypt.hash(crypto.randomUUID(), 10);
     const randomDigits = Math.floor(6000000000 + Math.random() * 3999999999);
     const userPhone =
@@ -86,7 +100,12 @@ export async function POST(request) {
       phone: userPhone,
       password: randomPassword,
       role: userRole,
-      location: location || {},
+      location: {
+        ...location,
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+        address: String(location.address).trim(),
+      },
     });
 
     const token = jwt.sign(

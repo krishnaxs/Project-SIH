@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import LanguageSelector from "@/components/LanguageSelector";
 
 export default function Home() {
   const router = useRouter();
 
   return (
-    <main className="relative min-h-screen bg-stone-50 text-slate-900">
+    <main className="relative min-h-screen bg-stone-50 pt-20 text-slate-900">
       {/* Transparent Farmland Background Image */}
       <div
         aria-hidden="true"
@@ -19,16 +20,17 @@ export default function Home() {
       />
 
       {/* Navbar */}
-      <nav className="relative z-10 bg-transparent">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-          <div className="text-2xl font-bold text-green-800 drop-shadow-sm">
+      <nav className="fixed inset-x-0 top-0 z-50 bg-green-900 shadow-md">
+        <div className="flex w-full items-center justify-between px-6 py-4 lg:px-8">
+          <div className="text-2xl font-bold text-white drop-shadow-sm">
             🌱 KrishiConnect
           </div>
 
-          <div className="flex items-center gap-3 pr-28 sm:pr-32">
+          <div className="flex items-center gap-3">
+            <LanguageSelector />
             <button
               onClick={() => router.push("/login")}
-              className="rounded-lg bg-green-700 px-5 py-2.5 font-semibold text-white transition hover:bg-green-800 shadow-md hover:shadow-lg"
+              className="rounded-lg bg-green-700 px-6 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-green-600 hover:shadow-lg"
             >
               Login
             </button>

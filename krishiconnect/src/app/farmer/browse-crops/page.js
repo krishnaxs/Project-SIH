@@ -10,10 +10,7 @@ export default function BrowseCropsPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    fetchCrops();
-  }, []);
+  const [selectedCrop, setSelectedCrop] = useState(null);
 
   const fetchCrops = async () => {
     try {
@@ -33,6 +30,12 @@ export default function BrowseCropsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(fetchCrops, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const filteredCrops = crops.filter((crop) =>
     crop.cropName.toLowerCase().includes(search.toLowerCase())
@@ -96,63 +99,74 @@ export default function BrowseCropsPage() {
         )}
 
         {!loading && !message && filteredCrops.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="hidden grid-cols-[minmax(0,1fr)_10rem_10rem_9rem] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-wide text-slate-500 sm:grid">
+              <span>Crop</span>
+              <span>Price</span>
+              <span>Quantity</span>
+              <span className="sr-only">Actions</span>
+            </div>
             {filteredCrops.map((crop) => (
               <div
                 key={crop._id}
-                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                className="grid gap-4 border-b border-slate-200 px-6 py-5 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_10rem_10rem_9rem] sm:items-center"
               >
-                <h2 className="text-xl font-bold text-slate-900">
-                  🌾 {crop.cropName}
-                </h2>
-
-                <div className="mt-5 space-y-3 text-sm text-slate-600">
-                  <p>
-                    <span className="font-semibold text-slate-800">
-                      Farmer:
-                    </span>{" "}
-                    {crop.farmer?.name || "Unknown"}
-                  </p>
-
-                  <p>
-                    <span className="font-semibold text-slate-800">
-                      Quantity:
-                    </span>{" "}
-                    {crop.quantity} {crop.unit}
-                  </p>
-
-                  <p>
-                    <span className="font-semibold text-slate-800">
-                      Price:
-                    </span>{" "}
-                    ₹{crop.price}
-                  </p>
-
-                  <p>
-                    <span className="font-semibold text-slate-800">
-                      Location:
-                    </span>{" "}
-                    {crop.farmer?.location?.address ||
-                      "Location not available"}
-                  </p>
-
-                  {crop.description && (
-                    <p>
-                      <span className="font-semibold text-slate-800">
-                        Details:
-                      </span>{" "}
-                      {crop.description}
-                    </p>
-                  )}
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:hidden">
+                    Crop
+                  </span>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    {crop.cropName}
+                  </h2>
                 </div>
 
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold sm:hidden">Price: </span>
+                  ₹{crop.price}
+                </p>
+
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold sm:hidden">Quantity: </span>
+                  {crop.quantity} {crop.unit}
+                </p>
+
                 <button
-                  className="mt-6 w-full rounded-lg bg-green-700 px-4 py-3 font-semibold text-white hover:bg-green-800"
+                  type="button"
+                  onClick={() => setSelectedCrop(crop)}
+                  className="w-full rounded-lg border border-green-700 px-3 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50"
                 >
-                  Contact Farmer
+                  More details
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {selectedCrop && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {selectedCrop.cropName}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCrop(null)}
+                  aria-label="Close crop details"
+                  className="text-2xl leading-none text-slate-400 hover:text-slate-700"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-3 text-sm text-slate-600">
+                <p><span className="font-semibold text-slate-900">Farmer:</span> {selectedCrop.farmer?.name || "Unknown"}</p>
+                <p><span className="font-semibold text-slate-900">Price:</span> ₹{selectedCrop.price}</p>
+                <p><span className="font-semibold text-slate-900">Quantity:</span> {selectedCrop.quantity} {selectedCrop.unit}</p>
+                <p><span className="font-semibold text-slate-900">Location:</span> {selectedCrop.farmer?.location?.address || "Location not available"}</p>
+                <p><span className="font-semibold text-slate-900">Description:</span> {selectedCrop.description || "No description provided."}</p>
+              </div>
+            </div>
           </div>
         )}
 

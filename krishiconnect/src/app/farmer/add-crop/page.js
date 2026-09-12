@@ -38,6 +38,23 @@ export default function AddCropPage() {
         return;
       }
 
+      const profileResponse = await fetch("/api/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const profileData = await profileResponse.json();
+      const farmerLocation = profileData.user?.location;
+
+      if (
+        !profileResponse.ok ||
+        !farmerLocation ||
+        !Number.isFinite(Number(farmerLocation.latitude)) ||
+        !Number.isFinite(Number(farmerLocation.longitude)) ||
+        !String(farmerLocation.address || "").trim()
+      ) {
+        setMessage("Please add your location in your profile before adding a crop.");
+        return;
+      }
+
       const response = await fetch("/api/crops", {
         method: "POST",
         headers: {

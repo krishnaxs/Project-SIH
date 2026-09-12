@@ -38,8 +38,24 @@ function getInitialLanguage() {
 
 export default function LanguageSelector() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [selectedLang, setSelectedLang] = useState(getInitialLanguage);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const hasScrolled = window.scrollY > 24;
+      setIsScrolled(hasScrolled);
+      if (hasScrolled) {
+        setIsOpen(false);
+      }
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Sync active language periodically so external resets are detected
   useEffect(() => {
@@ -224,7 +240,11 @@ export default function LanguageSelector() {
   return (
     <div
       ref={dropdownRef}
-      className="fixed top-3 right-4 z-[9999] notranslate"
+      className={`relative z-50 notranslate transition-all duration-200 ${
+        isScrolled
+          ? "pointer-events-none invisible -translate-y-3 opacity-0"
+          : "visible opacity-100"
+      }`}
       style={{ isolation: "isolate" }}
     >
       {/* Hidden google translate mount point */}
@@ -233,16 +253,16 @@ export default function LanguageSelector() {
       {/* Language Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-3.5 py-2 text-sm font-semibold text-slate-800 shadow-sm backdrop-blur transition hover:border-green-600 hover:bg-white focus:outline-none focus:ring-2 focus:ring-green-500/20"
+        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm backdrop-blur transition hover:border-green-600 hover:bg-white focus:outline-none focus:ring-1 focus:ring-green-500/20"
         aria-label="Change language"
         aria-expanded={isOpen}
       >
-        <span className="text-base leading-none">🌐</span>
-        <span className="font-medium text-slate-900">
+        <span className="text-xs leading-none">🌐</span>
+        <span className="text-xs font-medium text-slate-900">
           {currentLanguage.nativeName}
         </span>
         <svg
-          className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${
+          className={`h-3 w-3 text-slate-500 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
           fill="none"

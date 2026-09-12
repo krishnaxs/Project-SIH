@@ -30,6 +30,19 @@ export async function POST(request) {
       );
     }
 
+    const hasValidLocation =
+      location &&
+      Number.isFinite(Number(location.latitude)) &&
+      Number.isFinite(Number(location.longitude)) &&
+      String(location.address || "").trim();
+
+    if (!hasValidLocation) {
+      return NextResponse.json(
+        { message: "A valid location is required to register." },
+        { status: 400 }
+      );
+    }
+
     // Email validation
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanEmail = email.trim().toLowerCase();
@@ -82,7 +95,12 @@ export async function POST(request) {
       phone: cleanedPhone,
       password: hashedPassword,
       role,
-      location,
+      location: {
+        ...location,
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+        address: String(location.address).trim(),
+      },
     });
 
     // Create JWT

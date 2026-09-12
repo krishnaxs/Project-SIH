@@ -49,6 +49,19 @@ export async function POST(request) {
       );
     }
 
+    const farmerLocation = user.location;
+    if (
+      !farmerLocation ||
+      !Number.isFinite(Number(farmerLocation.latitude)) ||
+      !Number.isFinite(Number(farmerLocation.longitude)) ||
+      !String(farmerLocation.address || "").trim()
+    ) {
+      return NextResponse.json(
+        { message: "Please add your location before registering a crop." },
+        { status: 400 }
+      );
+    }
+
     const crop = await Crop.create({
       farmer: user._id,
       cropName,
@@ -56,7 +69,12 @@ export async function POST(request) {
       unit,
       price,
       description: description || "",
-      location: user.location,
+      location: {
+        ...farmerLocation.toObject?.() || farmerLocation,
+        latitude: Number(farmerLocation.latitude),
+        longitude: Number(farmerLocation.longitude),
+        address: String(farmerLocation.address).trim(),
+      },
     });
 
     return NextResponse.json(
